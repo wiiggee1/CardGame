@@ -1,0 +1,14 @@
+/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles/apples2apples.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles/package.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles/package_source.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles/edit_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles/rebuild_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/CMakeFiles/package.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/CMakeFiles/package_source.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/CMakeFiles/edit_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/CMakeFiles/rebuild_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/CLI11.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/package.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/package_source.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/edit_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,11 @@
+# Executables
+*.exe
+*.out
+*.app
+
+# Binary Program file - actual game
+./apples2apples
+
+./_deps/*
+
+./assignment_info/*
