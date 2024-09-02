@@ -4,8 +4,8 @@
 *.app
 
 # Binary Program file - actual game
-./apples2apples
+apples2apples
 
-./_deps/*
+_deps/*
 
-./assignment_info/*
+assignment_info/*
