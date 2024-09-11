@@ -10,4 +10,4 @@ _deps/*
 
 assignment_info/*
 
-./config.h
+config.h
