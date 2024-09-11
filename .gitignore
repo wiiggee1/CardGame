@@ -9,3 +9,5 @@ apples2apples
 _deps/*
 
 assignment_info/*
+
+./config.h
