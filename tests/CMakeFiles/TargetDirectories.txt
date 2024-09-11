@@ -1,0 +1,4 @@
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/tests.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/test.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/edit_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/rebuild_cache.dir

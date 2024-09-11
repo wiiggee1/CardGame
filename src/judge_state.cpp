@@ -1,4 +1,7 @@
 #include "judge_state.hpp"
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
 
 namespace Core {
     namespace Gameplay{
@@ -17,15 +20,13 @@ namespace Core {
             std::cout << "Executing Judge State" << std::endl;
         }
 
-        void JudgeState::update_state(){
-
-        }
+       
 
         void JudgeState::idle_state(){
 
         }
 
-        void JudgeState::event_handler(){
+        void JudgeState::on_event(Context* context, Event event, NetworkComponentInterface& network){
 
         }
 

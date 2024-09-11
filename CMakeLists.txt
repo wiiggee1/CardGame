@@ -47,6 +47,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(cli11_proj)
 
+# Unit tests
+add_subdirectory(tests)
+
 # Specify the include directories
 include_directories(./include)
 include_directories(${Boost_INCLUDE_DIR})

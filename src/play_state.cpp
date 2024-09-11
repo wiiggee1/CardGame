@@ -1,4 +1,7 @@
 #include "play_state.hpp"
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
 #include <iostream>
 
 namespace Core {
@@ -17,15 +20,11 @@ namespace Core {
 
         }
 
-        void PlayerState::update_state(){
-
-        }
-
         void PlayerState::idle_state(){
 
         }
 
-        void PlayerState::event_handler(){
+        void PlayerState::on_event(Context* context, Event event, NetworkComponentInterface& network){
 
         }
     }

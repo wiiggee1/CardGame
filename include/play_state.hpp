@@ -1,5 +1,6 @@
 #pragma once 
 
+#include "network/network_component_interface.hpp"
 #include "states.hpp"
 #include <iostream>
 #include <typeinfo>
@@ -26,9 +27,7 @@ namespace Core {
                 }
 
                 void idle_state() override;
-                void update_state() override;
-                void event_handler() override;
-
+                void on_event(Context *context, Event event,  NetworkComponentInterface& network) override;
 
             private:
                 

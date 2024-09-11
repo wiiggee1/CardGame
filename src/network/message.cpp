@@ -39,9 +39,7 @@ namespace Core {
 
             const unsigned char* msgtype_data = static_cast<const unsigned char*>(sending_buffer.data());
             const unsigned char* rpctype_data = static_cast<const unsigned char*>(sending_buffer.data()+sizeof(message.type));
-            //const unsigned char* payload_data = static_cast<const unsigned char*>()
-
-            //print_subsection("Message struct before serialization", "", ANSI_BOLD_BLUE, ANSI_COLOR_RESET);
+            
             print_message(message);
             //print_bytemessage(sending_buffer);
 

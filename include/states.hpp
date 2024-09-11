@@ -1,5 +1,7 @@
 #pragma once 
 
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
 #include "sessiontype.hpp"
 #include <algorithm>
 #include <iostream>
@@ -11,7 +13,7 @@
 namespace Core{
     namespace Gameplay{
 
-        class Context; 
+        class Context;
 
         enum class States{
             PLAYCARD,           // Play red apple from hand (based on green apple)
@@ -34,27 +36,20 @@ namespace Core{
             std::atomic<bool> all_played{false};
             std::atomic<bool> judge_has_selected{false};
             std::atomic<bool> is_judge{false};
-
         };
 
         class GameState{
             public:
                 virtual ~GameState() = default;
               
-                //TODO: - Change the virtual method name to 'StateTypes' names 
-                // -> Each unique state should run its own event loop! 
-                
-                /*
-                virtual void playcard() = 0;
-                virtual void voting() = 0;
-                virtual void drawcard() = 0;
-                */
 
+                /* Handle any ongoing state logic, such as waiting for player's action, etc...*/
                 virtual void execute_state() = 0;
                 virtual void active_state() = 0;
+                virtual void on_event(Context* context, Event event, NetworkComponentInterface& network) = 0;
+                
                 virtual void idle_state() = 0; // idle state should check for conditions iteratively
-                virtual void update_state() = 0;
-                virtual void event_handler() = 0;
+                
 
                 void set_context(Context *context){
                     this->context = context;
@@ -92,16 +87,17 @@ namespace Core{
                     this->state->idle_state();
                 }
 
-                void update_state() {
-                    this->state->update_state();
-                }
-
-                void event_handler() {
-                    this->state->event_handler();
+                void event_handler(Event event, NetworkComponentInterface& network) {
+                    this->state->on_event(this, event, network);
                 }
 
                 StateCondition& get_conditions() {
                     return this->conditions;
+                }
+
+                std::string get_current_state(){
+                    const std::type_info& type = typeid(this->state);
+                    return type.name();
                 }
 
             private:

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "events.hpp"
 #include "network/message.hpp"
 #include "network/network_component_interface.hpp"
 #include <array>
@@ -64,13 +65,29 @@ namespace Core {
             }
         }
 
-        void Client::request_handle(){
-
+        void Client::handle_message(const Core::Network::Message& message){
+            /* Map external RPC message events to internal events, and add to shared event queue. */ 
+            switch (message.rpc_type){
+                case Core::Network::RPCType::NewConnection: {
+                    event_queue->push_event(Gameplay::Event::PlayerJoined); 
+                    break; 
+                }
+                case Core::Network::RPCType::StartGame: {
+                    event_queue->push_event(Gameplay::Event::StartGame);
+                    break;
+                }
+                case Core::Network::RPCType::DealCard: {
+                    break;
+                }
+                case Core::Network::RPCType::PlayCard: {
+                    break;
+                }
+                case Core::Network::RPCType::Vote: {
+                    break;
+                }
+            }
         }
 
-        void Client::response_handle(){
-
-        }
 
         void Client::send_message(const std::string& msg_payload){
 
@@ -130,7 +147,8 @@ namespace Core {
                     //std::cout << get_endpoint_string(this->client_socket) << received_data << std::endl;
 
                     print_bytemessage(received_bytes); 
-                    auto msg = deserialize_message(received_bytes); 
+                    auto msg = deserialize_message(received_bytes);
+                    handle_message(msg);
 
                 }else {
                     std::cerr << errcode.message() << std::endl;

@@ -14,6 +14,7 @@ namespace Core {
             virtual ~SessionType() = default;
             virtual void setup_session() = 0;
             virtual void run_session() = 0;
+            virtual void run_state() = 0;
 
             template<typename T>
             T* get_network_as() {

@@ -1,6 +1,12 @@
 [
 {
   "directory": "/home/wiiggee1/Desktop/School/homeexam_d7032e",
+  "command": "/usr/bin/c++  -I/home/wiiggee1/Desktop/School/homeexam_d7032e/./include -I/home/wiiggee1/Desktop/School/homeexam_d7032e -I/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include -std=c++20 -Wall -Wextra -Wpedantic -o CMakeFiles/apples2apples.dir/src/events.cpp.o -c /home/wiiggee1/Desktop/School/homeexam_d7032e/src/events.cpp",
+  "file": "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/events.cpp",
+  "output": "CMakeFiles/apples2apples.dir/src/events.cpp.o"
+},
+{
+  "directory": "/home/wiiggee1/Desktop/School/homeexam_d7032e",
   "command": "/usr/bin/c++  -I/home/wiiggee1/Desktop/School/homeexam_d7032e/./include -I/home/wiiggee1/Desktop/School/homeexam_d7032e -I/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include -std=c++20 -Wall -Wextra -Wpedantic -o CMakeFiles/apples2apples.dir/src/game.cpp.o -c /home/wiiggee1/Desktop/School/homeexam_d7032e/src/game.cpp",
   "file": "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/game.cpp",
   "output": "CMakeFiles/apples2apples.dir/src/game.cpp.o"
@@ -16,6 +22,12 @@
   "command": "/usr/bin/c++  -I/home/wiiggee1/Desktop/School/homeexam_d7032e/./include -I/home/wiiggee1/Desktop/School/homeexam_d7032e -I/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include -std=c++20 -Wall -Wextra -Wpedantic -o CMakeFiles/apples2apples.dir/src/host.cpp.o -c /home/wiiggee1/Desktop/School/homeexam_d7032e/src/host.cpp",
   "file": "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/host.cpp",
   "output": "CMakeFiles/apples2apples.dir/src/host.cpp.o"
+},
+{
+  "directory": "/home/wiiggee1/Desktop/School/homeexam_d7032e",
+  "command": "/usr/bin/c++  -I/home/wiiggee1/Desktop/School/homeexam_d7032e/./include -I/home/wiiggee1/Desktop/School/homeexam_d7032e -I/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include -std=c++20 -Wall -Wextra -Wpedantic -o CMakeFiles/apples2apples.dir/src/joingame_state.cpp.o -c /home/wiiggee1/Desktop/School/homeexam_d7032e/src/joingame_state.cpp",
+  "file": "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/joingame_state.cpp",
+  "output": "CMakeFiles/apples2apples.dir/src/joingame_state.cpp.o"
 },
 {
   "directory": "/home/wiiggee1/Desktop/School/homeexam_d7032e",
@@ -64,5 +76,11 @@
   "command": "/usr/bin/c++  -I/home/wiiggee1/Desktop/School/homeexam_d7032e/./include -I/home/wiiggee1/Desktop/School/homeexam_d7032e -I/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include -std=c++20 -Wall -Wextra -Wpedantic -o CMakeFiles/apples2apples.dir/src/player.cpp.o -c /home/wiiggee1/Desktop/School/homeexam_d7032e/src/player.cpp",
   "file": "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/player.cpp",
   "output": "CMakeFiles/apples2apples.dir/src/player.cpp.o"
+},
+{
+  "directory": "/home/wiiggee1/Desktop/School/homeexam_d7032e/tests",
+  "command": "/usr/bin/c++ -DBOOST_UNIT_TEST_FRAMEWORK_DYN_LINK -DBOOST_UNIT_TEST_FRAMEWORK_NO_LIB -I/home/wiiggee1/Desktop/School/homeexam_d7032e/include -I/home/wiiggee1/Desktop/School/homeexam_d7032e -I/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include -std=c++20 -Wall -Wextra -Wpedantic -o CMakeFiles/tests.dir/game_test.cpp.o -c /home/wiiggee1/Desktop/School/homeexam_d7032e/tests/game_test.cpp",
+  "file": "/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/game_test.cpp",
+  "output": "tests/CMakeFiles/tests.dir/game_test.cpp.o"
 }
 ]

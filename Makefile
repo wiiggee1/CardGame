@@ -162,6 +162,43 @@ CLI11/fast:
 	$(MAKE) $(MAKESILENT) -f _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/build.make _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/build
 .PHONY : CLI11/fast
 
+#=============================================================================
+# Target rules for targets named tests
+
+# Build rule for target.
+tests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests
+.PHONY : tests
+
+# fast build rule for target.
+tests/fast:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/tests.dir/build.make tests/CMakeFiles/tests.dir/build
+.PHONY : tests/fast
+
+src/events.o: src/events.cpp.o
+.PHONY : src/events.o
+
+# target to build an object file
+src/events.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/events.cpp.o
+.PHONY : src/events.cpp.o
+
+src/events.i: src/events.cpp.i
+.PHONY : src/events.i
+
+# target to preprocess a source file
+src/events.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/events.cpp.i
+.PHONY : src/events.cpp.i
+
+src/events.s: src/events.cpp.s
+.PHONY : src/events.s
+
+# target to generate assembly for a file
+src/events.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/events.cpp.s
+.PHONY : src/events.cpp.s
+
 src/game.o: src/game.cpp.o
 .PHONY : src/game.o
 
@@ -233,6 +270,30 @@ src/host.s: src/host.cpp.s
 src/host.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/host.cpp.s
 .PHONY : src/host.cpp.s
+
+src/joingame_state.o: src/joingame_state.cpp.o
+.PHONY : src/joingame_state.o
+
+# target to build an object file
+src/joingame_state.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/joingame_state.cpp.o
+.PHONY : src/joingame_state.cpp.o
+
+src/joingame_state.i: src/joingame_state.cpp.i
+.PHONY : src/joingame_state.i
+
+# target to preprocess a source file
+src/joingame_state.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/joingame_state.cpp.i
+.PHONY : src/joingame_state.cpp.i
+
+src/joingame_state.s: src/joingame_state.cpp.s
+.PHONY : src/joingame_state.s
+
+# target to generate assembly for a file
+src/joingame_state.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/src/joingame_state.cpp.s
+.PHONY : src/joingame_state.cpp.s
 
 src/judge_state.o: src/judge_state.cpp.o
 .PHONY : src/judge_state.o
@@ -438,6 +499,10 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... CLI11"
 	@echo "... apples2apples"
+	@echo "... tests"
+	@echo "... src/events.o"
+	@echo "... src/events.i"
+	@echo "... src/events.s"
 	@echo "... src/game.o"
 	@echo "... src/game.i"
 	@echo "... src/game.s"
@@ -447,6 +512,9 @@ help:
 	@echo "... src/host.o"
 	@echo "... src/host.i"
 	@echo "... src/host.s"
+	@echo "... src/joingame_state.o"
+	@echo "... src/joingame_state.i"
+	@echo "... src/joingame_state.s"
 	@echo "... src/judge_state.o"
 	@echo "... src/judge_state.i"
 	@echo "... src/judge_state.s"

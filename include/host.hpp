@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "sessiontype.hpp"
+#include <cstddef>
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -21,6 +22,7 @@ namespace Core {
            
             void setup_session() override;
             void run_session() override;
+            void run_state() override;
 
             std::tuple<std::vector<std::string>&, std::vector<std::string>&> get_cards(){
                 // std::tie works the same as std::make_tuple but for lvalue references to its arguments. 
@@ -49,6 +51,12 @@ namespace Core {
             void deal_cards();
             void shuffle_cards();
             void randomize_judgeplayer();
+            
+            size_t get_player_count(){
+                return this->num_players;
+            }
+
+            void startgame_message();
 
 
         private:
@@ -57,7 +65,8 @@ namespace Core {
             std::vector<std::string> discard_red;
             std::vector<std::string> discard_green;
             
-        protected: 
+        protected:
+            size_t num_players = 0; 
     };
     
 }

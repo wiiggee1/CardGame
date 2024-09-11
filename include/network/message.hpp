@@ -39,6 +39,9 @@ namespace Core {
         enum class RPCType : uint8_t {
             DealCard,
             Vote,
+            NewConnection,
+            StartGame,
+            PlayCard,
         };
 
         struct Message{

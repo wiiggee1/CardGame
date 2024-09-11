@@ -65,15 +65,18 @@ CMAKE_BINARY_DIR = /home/wiiggee1/Desktop/School/homeexam_d7032e
 # The main recursive "all" target.
 all: CMakeFiles/apples2apples.dir/all
 all: _deps/cli11_proj-build/all
+all: tests/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
 preinstall: _deps/cli11_proj-build/preinstall
+preinstall: tests/preinstall
 .PHONY : preinstall
 
 # The main recursive "clean" target.
 clean: CMakeFiles/apples2apples.dir/clean
 clean: _deps/cli11_proj-build/clean
+clean: tests/clean
 .PHONY : clean
 
 #=============================================================================
@@ -107,18 +110,33 @@ _deps/cli11_proj-build/src/clean: _deps/cli11_proj-build/src/CMakeFiles/CLI11.di
 .PHONY : _deps/cli11_proj-build/src/clean
 
 #=============================================================================
+# Directory level rules for directory tests
+
+# Recursive "all" directory target.
+tests/all: tests/CMakeFiles/tests.dir/all
+.PHONY : tests/all
+
+# Recursive "preinstall" directory target.
+tests/preinstall:
+.PHONY : tests/preinstall
+
+# Recursive "clean" directory target.
+tests/clean: tests/CMakeFiles/tests.dir/clean
+.PHONY : tests/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/apples2apples.dir
 
 # All Build rule for target.
 CMakeFiles/apples2apples.dir/all: _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/apples2apples.dir/build.make CMakeFiles/apples2apples.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12 "Built target apples2apples"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14 "Built target apples2apples"
 .PHONY : CMakeFiles/apples2apples.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/apples2apples.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/apples2apples.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles 0
 .PHONY : CMakeFiles/apples2apples.dir/rule
@@ -157,6 +175,32 @@ CLI11: _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/rule
 _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/clean:
 	$(MAKE) $(MAKESILENT) -f _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/build.make _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/clean
 .PHONY : _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/clean
+
+#=============================================================================
+# Target rules for target tests/CMakeFiles/tests.dir
+
+# All Build rule for target.
+tests/CMakeFiles/tests.dir/all: _deps/cli11_proj-build/src/CMakeFiles/CLI11.dir/all
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/tests.dir/build.make tests/CMakeFiles/tests.dir/depend
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/tests.dir/build.make tests/CMakeFiles/tests.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles --progress-num=15,16 "Built target tests"
+.PHONY : tests/CMakeFiles/tests.dir/all
+
+# Build rule for subdir invocation for target.
+tests/CMakeFiles/tests.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/tests.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/wiiggee1/Desktop/School/homeexam_d7032e/CMakeFiles 0
+.PHONY : tests/CMakeFiles/tests.dir/rule
+
+# Convenience name for target.
+tests: tests/CMakeFiles/tests.dir/rule
+.PHONY : tests
+
+# clean rule for target.
+tests/CMakeFiles/tests.dir/clean:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/tests.dir/build.make tests/CMakeFiles/tests.dir/clean
+.PHONY : tests/CMakeFiles/tests.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

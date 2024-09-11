@@ -1,13 +1,13 @@
 #pragma once
 
+#include "network/message.hpp"
 #include <boost/asio/ip/tcp.hpp>
 #include <string>
 class NetworkComponentInterface {
     public:
         virtual void initialize() = 0;
         virtual void run() = 0;
-        virtual void request_handle() = 0;
-        virtual void response_handle() = 0;
+        virtual void handle_message(const Core::Network::Message& message) = 0;
         virtual void send_message(const std::string& msg_payload) = 0;
 
         std::string get_endpoint_string(boost::asio::ip::tcp::socket& tcp_socket){

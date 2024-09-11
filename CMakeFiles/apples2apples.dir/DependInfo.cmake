@@ -8,9 +8,11 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/events.cpp" "CMakeFiles/apples2apples.dir/src/events.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/events.cpp.o.d"
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/game.cpp" "CMakeFiles/apples2apples.dir/src/game.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/game.cpp.o.d"
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/game_cli.cpp" "CMakeFiles/apples2apples.dir/src/game_cli.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/game_cli.cpp.o.d"
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/host.cpp" "CMakeFiles/apples2apples.dir/src/host.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/host.cpp.o.d"
+  "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/joingame_state.cpp" "CMakeFiles/apples2apples.dir/src/joingame_state.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/joingame_state.cpp.o.d"
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/judge_state.cpp" "CMakeFiles/apples2apples.dir/src/judge_state.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/judge_state.cpp.o.d"
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/main.cpp" "CMakeFiles/apples2apples.dir/src/main.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/main.cpp.o.d"
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/src/network/client.cpp" "CMakeFiles/apples2apples.dir/src/network/client.cpp.o" "gcc" "CMakeFiles/apples2apples.dir/src/network/client.cpp.o.d"

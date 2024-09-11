@@ -1,5 +1,6 @@
 #pragma once
 
+#include "events.hpp"
 #include "network/network_component_interface.hpp"
 #include "network/session_connections.hpp"
 #include <boost/asio.hpp>
@@ -29,11 +30,9 @@ namespace Core {
                 * The abstract run() method, will invoke or call the io_context.run() boost::asio method. 
                 **/
                 void run() override;
-                
-                void request_handle() override;
-                void response_handle() override;
+               
+                void handle_message(const Core::Network::Message& message) override;
                 void send_message(const std::string& msg_payload) override;
-
 
                 /* Listen for incoming connections (wait for incoming clients)... */
                 void listen();
@@ -58,6 +57,8 @@ namespace Core {
                 boost::asio::ip::tcp::acceptor conn_acceptor;
                 PlayerClient clients;
                 EventCallback callback;
+                std::shared_ptr<Gameplay::EventHandler> event_queue;
+
         };
     }
 }

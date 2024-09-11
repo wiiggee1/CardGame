@@ -1,48 +1,46 @@
+#include "network/network_component_interface.hpp"
 #include "play_state.hpp"
+#include "states.hpp"
 #include <joingame_state.hpp>
 #include <memory>
+#include <ostream>
+#include <iostream>
+#include <thread>
 
 namespace Core {
     namespace Gameplay{
 
         void JoinGameState::execute_state(){
-            std::cout << "Executing JoinGame State" << std::endl;
+            // Here you might poll or receive continuous updates from the server
+            // Check if any status update is needed or if any other condition has been met
+            
+            std::string space_char = " ";
+            bool blink_flag = true;
+
             auto& state_conditions = this->context->get_conditions();
             state_conditions.waiting_tostart = true;
-            
-            while(state_conditions.waiting_tostart) {
-                event_handler(); 
+           
+            if (state_conditions.all_connected){
+                this->context->set_state(std::make_unique<PlayerState>());
             }
-            this->update_state();
 
+            //std::cout << "\033[2J\033[H" << std::flush; // clear the screen
+            std::system("clear"); 
+            
+            
         }
 
         void JoinGameState::idle_state(){
 
         }
 
-        void JoinGameState::update_state(){
-            
+       
+        void JoinGameState::on_event(Context* context, Event event, NetworkComponentInterface& network){
             auto& state_conditions = this->context->get_conditions();
-            if (!state_conditions.is_judge){
-                this->context->set_state(std::make_unique<Gameplay::PlayerState>());
+            if (event == Event::UserInput) {
 
-            }else if (state_conditions.is_judge) {
-                // is in judge state
-            }
-
-        }
-        void JoinGameState::event_handler(){
-            auto& state_conditions = this->context->get_conditions();
-            
-            if (this->enough_players()){
-                std::cout << "Enough players have joined. Switching to Starting Game State!" << std::endl;
-                //state->get_context()->set_state(std::unique_ptr<GameState> new_state)
-                //state->switch_state(std::make_unique<Gameplay::PlayerState>());
-                state_conditions.waiting_tostart = false;
-
-            }else {
-                std::cout << "Printout of status of num of clients that has connected" << std::endl;
+            }else if (event == Event::StartGame) {
+                // TODO: - Send request with RPC message type DealCard, should also transition  
             }
         }
 

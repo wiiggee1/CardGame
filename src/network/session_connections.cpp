@@ -14,6 +14,7 @@
 #include <format>
 #include <iostream>
 #include "network/session_connections.hpp"
+#include "events.hpp"
 #include "network/message.hpp"
 
 namespace Core {
@@ -39,9 +40,7 @@ namespace Core {
                     std::string received_data(socket_buffer, this->socket_buffer+byte_size);
                     std::vector<uint8_t> received_bytes(this->socket_buffer, this->socket_buffer+byte_size);
 
-                    //std::cout << get_endpoint_stringz() << received_data << std::endl;
-                    //std::cout << get_endpoint_stringz() << std::endl;
-                    //std::cout << std::setw(1) << std::left << ANSI_BOLD <<  get_endpoint_stringz() << ANSI_COLOR_RESET << "\n" <<  std::endl;
+                    
                     std::cout << std::setw(1) << std::left << ANSI_BOLD << ANSI_COLOR_GREEN <<  get_endpoint_stringz() << ANSI_COLOR_RESET << "" <<  std::endl;
                     
                     print_bytemessage(received_bytes);
@@ -53,6 +52,9 @@ namespace Core {
                     auto msg = deserialize_message(received_bytes);
                     msg.type = MessageType::Response;
                     msg.payload = "Received OK";
+                    
+                    
+                    trigger_callback(Gameplay::Event event_type);
                     
                     auto response_msg = serialize_message(msg);
                     write_to_client(response_msg);

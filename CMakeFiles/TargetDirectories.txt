@@ -12,3 +12,8 @@
 /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/package_source.dir
 /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/edit_cache.dir
 /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/CMakeFiles/rebuild_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/tests.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/package.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/package_source.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/edit_cache.dir
+/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/CMakeFiles/rebuild_cache.dir

@@ -26,44 +26,33 @@ namespace Core {
         network->run();
     }
 
+    void Player::run_state(){
+        /*
+         * Handle Inputs from the player.
+         * Send the player's actions to the host via the 'Client' member.
+         * Receives Updates, by listening for updates from the host and updates the local game state.
+         */
+        this->state_context->execute_state();
+    }
+
     void Player::switch_state(std::unique_ptr<Gameplay::GameState> new_state){
         this->state_context->set_state(std::move(new_state));
     }
 
-    void Player::test_readwrite_communication(){
-        std::cout << "Attempting to write to Server..." << std::endl;
-        //network->send_message("This is a Player message TEST!");
+    void Player::setup_context(std::unique_ptr<Gameplay::GameState> state){
+        this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
+    }
 
-        /*
-        boost::asio::const_buffer buffer_test = "this is a test payload"_buf;
-        std::cout << "byte array data:" << buffer_test.data() << std::endl;
-        std::cout << "byte array data size:" << buffer_test.size() << std::endl;
-        
-        auto byte_array = boost::asio::buffer("this is a test payload!");
-        std::cout << "byte array data: " << byte_array.data() << std::endl;
-        const char* char_data = static_cast<const char*>(byte_array.data());
-        std::string buffer_info = std::format("Byte data: {}, Char data: {}", byte_array.data(), char_data);
-        std::cout << buffer_info << std::endl;
-        */
-
+    void Player::send_request(){
         Network::Message msg;
         msg.type = Network::MessageType::Request;
         msg.rpc_type = Network::RPCType::DealCard;
         msg.payload = "This is a Player message test!";
         auto byte_message = Network::serialize_message(msg);
         get_network_as<Network::Client>()->send_message_test(byte_message);
-        //get_network_as<Network::Client>()->send_message("This is a Player message TEST!");
+        
+        //this->network->send_message(const std::string &msg_payload)
     }
+   
 
-    void Player::test_serialization(){
-        std::cout << "Running test_serialization logic: \n" << std::endl;
-        Network::Message msg;
-        msg.type = Network::MessageType::Request;
-        msg.rpc_type = Network::RPCType::DealCard;
-        msg.payload = "This is a Player message test!";
-        auto byte_message = Network::serialize_message(msg);
-
-        std::cout << "Testing deserialization logic: \n" << std::endl;
-        auto decoded_msg = Network::deserialize_message(byte_message);
-    }
 }

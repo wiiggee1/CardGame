@@ -15,7 +15,7 @@
 ########################
 
 //The directory containing a CMake configuration file for Boost.
-Boost_DIR:PATH=/usr/lib/cmake/Boost-1.83.0
+Boost_DIR:PATH=/usr/lib/cmake/Boost-1.86.0
 
 //Path to a file.
 Boost_INCLUDE_DIR:PATH=/usr/include
@@ -23,6 +23,8 @@ Boost_INCLUDE_DIR:PATH=/usr/include
 Boost_SYSTEM_LIBRARY_RELEASE:STRING=/usr/lib/libboost_system.so.1.83.0
 
 Boost_THREAD_LIBRARY_RELEASE:STRING=/usr/lib/libboost_thread.so.1.83.0
+
+Boost_UNIT_TEST_FRAMEWORK_LIBRARY_RELEASE:STRING=/usr/lib/libboost_unit_test_framework.so.1.86.0
 
 //Value Computed by CMake
 CLI11_BINARY_DIR:STATIC=/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build
@@ -372,13 +374,16 @@ apples2apples_IS_TOP_LEVEL:STATIC=ON
 apples2apples_SOURCE_DIR:STATIC=/home/wiiggee1/Desktop/School/homeexam_d7032e
 
 //The directory containing a CMake configuration file for boost_headers.
-boost_headers_DIR:PATH=/usr/lib/cmake/boost_headers-1.83.0
+boost_headers_DIR:PATH=/usr/lib/cmake/boost_headers-1.86.0
 
 //The directory containing a CMake configuration file for boost_system.
-boost_system_DIR:PATH=/usr/lib/cmake/boost_system-1.83.0
+boost_system_DIR:PATH=/usr/lib/cmake/boost_system-1.86.0
 
 //The directory containing a CMake configuration file for boost_thread.
-boost_thread_DIR:PATH=/usr/lib/cmake/boost_thread-1.83.0
+boost_thread_DIR:PATH=/usr/lib/cmake/boost_thread-1.86.0
+
+//The directory containing a CMake configuration file for boost_unit_test_framework.
+boost_unit_test_framework_DIR:PATH=/usr/lib/cmake/boost_unit_test_framework-1.86.0
 
 
 ########################
@@ -398,7 +403,7 @@ CMAKE_CACHE_MAJOR_VERSION:INTERNAL=3
 //Minor version of cmake used to create the current loaded cache
 CMAKE_CACHE_MINOR_VERSION:INTERNAL=30
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=1
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=3
 //ADVANCED property for variable: CMAKE_COLOR_MAKEFILE
 CMAKE_COLOR_MAKEFILE-ADVANCED:INTERNAL=1
 //Path to CMake executable.
@@ -523,7 +528,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=3
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=4
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -589,7 +594,7 @@ CPACK_BINARY_TXZ-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CPACK_BINARY_TZ
 CPACK_BINARY_TZ-ADVANCED:INTERNAL=1
 //Details about finding Boost
-FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/usr/lib/cmake/Boost-1.83.0/BoostConfig.cmake][cfound components: system thread ][v1.83.0(1.83.0)]
+FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/usr/lib/cmake/Boost-1.86.0/BoostConfig.cmake][cfound components: system thread unit_test_framework ][v1.86.0(1.83.0)]
 //ADVANCED property for variable: GIT_EXECUTABLE
 GIT_EXECUTABLE-ADVANCED:INTERNAL=1
 //linker supports push/pop state
@@ -602,4 +607,6 @@ boost_headers_DIR-ADVANCED:INTERNAL=1
 boost_system_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: boost_thread_DIR
 boost_thread_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: boost_unit_test_framework_DIR
+boost_unit_test_framework_DIR-ADVANCED:INTERNAL=1
 

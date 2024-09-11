@@ -1,5 +1,6 @@
 #pragma once
 
+#include "events.hpp"
 #include "game_cli.hpp"
 #include "host.hpp"
 #include "network/client.hpp"
@@ -11,16 +12,15 @@
 #include <atomic>
 #include <boost/asio/ip/tcp.hpp>
 #include <memory>
+#include <queue>
 namespace Core {
     
     class Game{
         
         private:
             std::unique_ptr<SessionType> session;
+            std::shared_ptr<Gameplay::EventHandler> event_queue;
             std::atomic<int> player_count = 0;
-            std::atomic<bool> waiting;
-            std::atomic<bool> start_condition = false;
-            std::thread waitingplayers_thread;
 
         protected:
             
@@ -44,7 +44,6 @@ namespace Core {
                 return dynamic_cast<T*>(session.get());
             }
 
-            void test_state_transitions();
 
             /**
              * Method for setting up the game, such as calling various setup-related methods like loading cards.
@@ -74,7 +73,11 @@ namespace Core {
              */
             void enter_game();
 
-            void await_players();
+            void setup_eventcallbacks();
+
+            void process_events();
+
+            void process_input();
 
             void start_gameloop();
 
@@ -86,7 +89,6 @@ namespace Core {
                 return player_count.load() >= 4;
             }
 
-            void request_number_of_joined();
     };
     
 }

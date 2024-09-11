@@ -45,7 +45,7 @@ if(head_sha STREQUAL "")
 endif()
 
 if("${can_fetch}" STREQUAL "")
-  set(can_fetch "")
+  set(can_fetch "YES")
 endif()
 
 execute_process(

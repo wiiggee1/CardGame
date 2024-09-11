@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "CLI/App.hpp"
+#include "events.hpp"
 #include "game_cli.hpp"
 #include "host.hpp"
 #include "joingame_state.hpp"
@@ -24,8 +25,9 @@
 #include <vector>
 
 namespace Core{
-   
-    Game::Game(){
+  
+
+    Game::Game() : event_queue(std::make_shared<Gameplay::EventHandler>()){
         cli_menu.setup_arg_parser();
         //this->state_context = nullptr;
     }
@@ -34,36 +36,6 @@ namespace Core{
         std::cout << "Setting up the game, please wait for all players to connect..." << std::endl;
        
     }
-
-    //WARN: This is only for testing the state transitions and how the pointers behave and change during runtime!
-    void Game::test_state_transitions(){
-        // DEBUGGING THE STATE TRANSITION LOGIC BELOW: 
-
-        std::cout << "session ptr address: " << session.get() << std::endl;
-
-
-        auto state = get_session_as<Player>();
-        std::cout << "Current Player session has a ptr value of: " << state << std::endl;
-
-        state->get_context() = std::make_unique<Gameplay::Context>(std::make_unique<Gameplay::PlayerState>());
-        std::cout << "Initialized context to Playing state, with a ptr value of: " << state->get_context().get() << std::endl;
-        state->get_context()->active_state();
-        state->get_context()->execute_state();
-
-        // --------------------------------
-        auto* player = state->get_context().get();
-        
-        player->set_state(std::make_unique<Gameplay::JudgeState>());
-        std::cout << "Changing to Judge state, with a Context ptr value of: " << player << std::endl;
-        player->active_state();
-        player->execute_state();
-        
-        player->set_state(std::make_unique<Gameplay::PlayerState>());
-        std::cout << "Changing state back to Playing state, with a Context ptr value of: " << player << std::endl;
-        player->active_state();
-        player->execute_state();
-    }
-
 
     void Game::create_session(){
 
@@ -79,6 +51,7 @@ namespace Core{
             auto endpoint = create_endpoint();
             
             host->add_network_component(std::make_unique<Network::Server>(io_context_, endpoint));
+            
             host->get_network_as<Network::Server>()->set_callback([this](){
                     std::cout << "This callback is invoked whenever a new client has joined!" << std::endl;
                     auto nr_clients = this->session->get_network_as<Network::Server>()->get_clients().size();
@@ -90,9 +63,6 @@ namespace Core{
             load_config_to(config_path+"redApples.txt", red_cards);
             load_config_to(config_path+"greenApples.txt", green_cards);
 
-            //host->show_cards(CardType::RED);
-            //std::cout << "Green apple cards stored: " << std::endl;
-            //host->show_cards(CardType::GREEN);
 
             /* Setting up the host session, by calling neccessary async operations for the Server */
             //host->setup_session();
@@ -125,9 +95,16 @@ namespace Core{
             auto* player = create_session_as<Player>();
             player->add_network_component(std::make_unique<Network::Client>(io_context_, host_address, this->cli_menu.port));
 
-            player->get_context()->set_state(std::make_unique<Gameplay::JoinGameState>()); 
+            std::cout << "before trying to set_state, in create_session" << std::endl;
+            //player->get_context()->set_state(std::make_unique<Gameplay::JoinGameState>());
+            //TODO: - Fix how to initialize the starting context state. 
+            
+            //player->get_context() = std::make_unique<Gameplay::Context>(std::make_unique<Gameplay::JoinGameState>());
 
-            test_state_transitions();
+            player->setup_context(std::make_unique<Gameplay::JoinGameState>());
+
+            std::cout << "before testing test_state_transitions" << std::endl;
+            //test_state_transitions();
 
             //player->setup_session();
             session->setup_session();
@@ -145,7 +122,9 @@ namespace Core{
             std::cout << "This is an IO test to server after running io_context.run()..." << std::endl;
 
             /* Just testing writing and reading payload messages between server and client */
-            player->test_readwrite_communication();
+            //player->test_readwrite_communication();
+
+            start_gameloop();
 
             client_thread.join();
         }
@@ -153,7 +132,6 @@ namespace Core{
     }
 
     boost::asio::ip::tcp::endpoint Game::create_endpoint(){
-
         auto subcommand = [this]() -> CLI::App*{
             auto host_subcommand = this->cli_menu.app.get_subcommand("host");
             auto join_subcommand = this->cli_menu.app.get_subcommand("join");
@@ -197,52 +175,91 @@ namespace Core{
             cards.push_back(card_string);
             target_data.push_back(card_string);
         }
-
         config_file.close();
     }
 
-    void Game::request_number_of_joined(){
-        //TODO: 
-        //  1. Send message to server to get number of clients 
-        //  2. Update the atomic player_count for the Game class 
-        //  3. Check if the number of players condition is satisfied
-
-        while (!start_condition.load()){
-            if (playercount_condition()){
-                // All players have joined 
-                auto& conditions = this->get_session_as<Player>()->get_context()->get_conditions();
-                conditions.all_connected = true;
-                start_condition = true;
-            }else {
-                // Request player count again from the server
-            }
-        }
-    }
+    //TODO: 
+    //  1. Send message to server to get number of clients 
+    //  2. Update the atomic player_count for the Game class 
+    //  3. Check if the number of players condition is satisfied
 
     void Game::enter_game(){
         //TODO: 
         //1. Send message to host for incrementing player count value
         //2. Check bool for enough players (minimum number of players to start the game)
         
-        this->waiting = true;
-        this->waitingplayers_thread = std::thread(&Game::await_players, this);
-        //WARN: - Should I add another thread for checking the number of players condition?
+        //this->waiting = true;
+        //this->waitingplayers_thread = std::thread(&Game::await_players, this);
     }
 
-    void Game::await_players(){
-        auto state = get_session_as<Player>();
-        //increment_playercount();
-        state->get_context()->execute_state();
-        // When atomic bool 'waiting' is false run 'start_gameloop'
-        start_gameloop();
+    void Game::setup_eventcallbacks(){
+        event_queue->add_callback(Gameplay::Event::PlayerJoined, [this](){
+                //this->increment_playercount();
+                if(this->cli_menu.host_server == true){
+                    auto session = get_session_as<Host>();
+                    auto client_count = session->get_player_count();
+                    this->player_count = client_count;
+
+                    if(this->playercount_condition() == true){
+                        this->event_queue->push_event(Gameplay::Event::StartGame); 
+                    } 
+                }
+        });
+        event_queue->add_callback(Gameplay::Event::StartGame, [this](){
+            
+        });
+
+
+        // Add more under... But should trigger these in process_event or should it be triggered using:
+        // context->event_handler() = state->on_event()... 
+    }
+
+    void Game::process_events(){
+        while (!this->event_queue->empty()) {
+            Gameplay::Event event = event_queue->pop_event();
+
+            if(this->cli_menu.host_server == true){
+                auto session = get_session_as<Host>();
+                // Define event handling for the Host class
+                this->event_queue->trigger_event(event); // This method requries to add_callback to map first.
+
+            }else {
+                auto session = get_session_as<Player>();
+                auto& context = session->get_context();
+                //session->get_context()->event_handler(event);
+                
+                // Dereference the sessions unique_ptr<Network>
+                context->event_handler(event, *session->get_network_as<Network::Client>());
+            }
+        }
+    }
+
+    void Game::process_input(){
+        //TODO: - Handle user inputs, where user input generate events that are processed by the game loop.
+        //std::cout << "In 'process_input'" << std::endl;
     }
 
     void Game::start_gameloop(){
         //WARN: 
         // - Should periodically checks for updates, and monitor conditions or atomic variables.
         // - Transitions to another state when the condition is met.
-        while(!start_condition.load()){
+        
+        while(true) {
 
+            //std::cout << "\033[2J\033[H"; // Clear screen and move cursor to top
+
+            // This method should push input events to the event queue. By polling and capturing input events
+            process_input();
+
+            // This method should handle the core logic of the current game state. Its called every frame.
+            session->run_state();
+
+            process_events();
+
+            //Dereference of the unique pointer, to get the context and the current state. 
+            //this->event_handler.process_event(*session->get_context());
+           
+            
         }
     }
 }

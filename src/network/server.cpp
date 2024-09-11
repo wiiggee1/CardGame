@@ -1,5 +1,6 @@
 #pragma once
 
+#include "events.hpp"
 #include "network/network_component_interface.hpp"
 #include "network/session_connections.hpp"
 #include <boost/asio/io_context.hpp>
@@ -46,14 +47,11 @@ namespace Core {
                 std::cerr << "IO Context 'run() method got error: " << errcode << std::endl;
             }
         }
-
-        void Server::request_handle(){
-
-        }
-
-        void Server::response_handle(){
+        
+        void Server::handle_message(const Core::Network::Message& message){
 
         }
+
 
         void Server::send_message(const std::string& msg_payload){
             std::cout << "This shouldnt be manually controlled, but will send message, to all of the clients" << std::endl;
@@ -75,8 +73,14 @@ namespace Core {
                     auto new_connection = std::make_shared<SessionConnection>(std::move(socket), *this);
                     clients.push_back(new_connection);
 
+
                     this->trigger_event(); // This triggers the event of a new client has connected, and will call the Game class callback method. 
-                    
+                
+                    /* Callback that is triggered whenever a distinct socket receives a client request. This callback would push the new event to the queue. Which is processed in the gameloop. */
+                    new_connection->set_callback([this](Gameplay::Event event){
+                        this->event_queue->push_event(event);
+                    });
+
                     new_connection->start_reading();
                         
                 }

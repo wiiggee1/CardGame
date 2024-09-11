@@ -25,11 +25,11 @@ namespace Core {
 
             void setup_session() override;
             void run_session() override;
-
+            void run_state() override;
+            
+            void setup_context(std::unique_ptr<Gameplay::GameState> state);
             void switch_state(std::unique_ptr<Gameplay::GameState> new_state);
-
-            void test_readwrite_communication();
-            void test_serialization();
+            void send_request();
 
         private:
             int player_id; 
@@ -40,11 +40,12 @@ namespace Core {
         protected:
             /**
              * Unique pointer context, for managing game states (Player or Judge states).
+             * Recall that a unique pointer maintains exclusive ownership and can only be moved.
              */
-            std::unique_ptr<Gameplay::Context> state_context;
-            //std::mutex mtx;
-            //std::condition_variable cv;
-            //std::atomic<bool> condition_met(false);
+            std::unique_ptr<Gameplay::Context> state_context = nullptr;
+            
+
+
     };
     
 }
