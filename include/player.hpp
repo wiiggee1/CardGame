@@ -19,9 +19,19 @@ namespace Core {
                 return this->red_cards;
             }
 
+            void add_card(std::string card){
+                this->red_cards.push_back(card);
+            }
+
             std::unique_ptr<Gameplay::Context>& get_context(){
                 return state_context;
             }
+
+            int get_points(){
+                return this->green_cards.size();
+            }
+
+            std::string show_cards();
 
             void setup_session() override;
             void run_session() override;
@@ -30,6 +40,8 @@ namespace Core {
             void setup_context(std::unique_ptr<Gameplay::GameState> state);
             void switch_state(std::unique_ptr<Gameplay::GameState> new_state);
             void send_request();
+            bool is_in_state(Gameplay::StateTypes state_type) const;
+            void synchronize_game(); // This is a request for loading and synchronizing the game state.
 
         private:
             int player_id; 

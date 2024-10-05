@@ -26,7 +26,7 @@ namespace Core {
 
         }
 
-        void JudgeState::on_event(Context* context, Event event, NetworkComponentInterface& network){
+        void JudgeState::on_event(Context* context, Event event){
 
         }
 

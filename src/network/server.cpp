@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include "network/server.hpp"
+#include "game.hpp"
 
 namespace Core {
     namespace Network {
@@ -77,8 +78,10 @@ namespace Core {
                     this->trigger_event(); // This triggers the event of a new client has connected, and will call the Game class callback method. 
                 
                     /* Callback that is triggered whenever a distinct socket receives a client request. This callback would push the new event to the queue. Which is processed in the gameloop. */
+                    
                     new_connection->set_callback([this](Gameplay::Event event){
-                        this->event_queue->push_event(event);
+                        auto event_queue = Core::Game::getEventHandler();
+                        event_queue->push_event(event);
                     });
 
                     new_connection->start_reading();

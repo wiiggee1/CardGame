@@ -1,6 +1,7 @@
 #pragma once
 
 #include "events.hpp"
+#include "network/message.hpp"
 #include <boost/asio.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -32,6 +33,8 @@ namespace Core {
                         network_callback(event_type);
                     }
                 }
+
+                void handle_request(const Message& message);
 
             private:
                 boost::asio::ip::tcp::socket tcp_socket;

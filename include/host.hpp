@@ -1,8 +1,10 @@
 #pragma once 
 
+#include "network/server.hpp"
 #include "sessiontype.hpp"
 #include <cstddef>
 #include <iostream>
+#include <map>
 #include <tuple>
 #include <vector>
 
@@ -52,21 +54,26 @@ namespace Core {
             void shuffle_cards();
             void randomize_judgeplayer();
             
-            size_t get_player_count(){
-                return this->num_players;
+            size_t get_client_count(){
+                return this->client_count;
             }
 
+            void loadgame_request();
             void startgame_message();
+
+            void lookup_judge(int judge_id);
 
 
         private:
+            std::map<int, Network::PlayerClient> judge_connection;
             std::vector<std::string> red_deck;
             std::vector<std::string> green_deck;
             std::vector<std::string> discard_red;
             std::vector<std::string> discard_green;
             
         protected:
-            size_t num_players = 0; 
+            size_t client_count = 0;
+            size_t cardplayed_count = 0; 
     };
     
 }

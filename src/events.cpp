@@ -1,8 +1,10 @@
 #include "events.hpp"
+#include <memory>
+#include <mutex>
 
 namespace Core {
-    namespace Gameplay{
 
+    namespace Gameplay{
 
         void EventHandler::push_event(Event event){
             std::lock_guard<std::mutex> lock(queue_mutex);
@@ -33,6 +35,21 @@ namespace Core {
             if (this->callbacks.find(event) != this->callbacks.end()){
                 this->callbacks[event]();
             }
+        }
+
+        void EventHandler::store_message(const Network::Message& message){
+            std::lock_guard<std::mutex> lock(message_mutex);
+            message_queue.push(message);
+        }
+
+        Network::Message EventHandler::get_last_message(){
+            std::lock_guard<std::mutex> lock(message_mutex);
+            if (!message_queue.empty()){
+                auto msg = message_queue.front();
+                message_queue.pop();
+                return msg;
+            }
+            return {};
         }
 
     } 

@@ -1,3 +1,4 @@
+#include "events.hpp"
 #include "network/network_component_interface.hpp"
 #include "play_state.hpp"
 #include "states.hpp"
@@ -6,6 +7,7 @@
 #include <ostream>
 #include <iostream>
 #include <thread>
+#include "game.hpp"
 
 namespace Core {
     namespace Gameplay{
@@ -21,7 +23,7 @@ namespace Core {
             state_conditions.waiting_tostart = true;
            
             if (state_conditions.all_connected){
-                this->context->set_state(std::make_unique<PlayerState>());
+                this->context->set_state(std::make_unique<PlayingState>());
             }
 
             //std::cout << "\033[2J\033[H" << std::flush; // clear the screen
@@ -35,12 +37,17 @@ namespace Core {
         }
 
        
-        void JoinGameState::on_event(Context* context, Event event, NetworkComponentInterface& network){
+        void JoinGameState::on_event(Context* context, Event event){
             auto& state_conditions = this->context->get_conditions();
-            if (event == Event::UserInput) {
+            if (event == Event::SynchronizeGame) {
+                auto event_handler = Core::Game::getEventHandler();
+                event_handler->trigger_event(event);
 
-            }else if (event == Event::StartGame) {
-                // TODO: - Send request with RPC message type DealCard, should also transition  
+            }else if (event == Event::GameStarted) {
+                this->context->set_state(std::make_unique<PlayingState>()); 
+
+            }else if (event == Event::PlayerJoined){
+
             }
         }
 

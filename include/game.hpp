@@ -11,6 +11,7 @@
 #include "states.hpp"
 #include <atomic>
 #include <boost/asio/ip/tcp.hpp>
+#include <cstddef>
 #include <memory>
 #include <queue>
 namespace Core {
@@ -19,8 +20,7 @@ namespace Core {
         
         private:
             std::unique_ptr<SessionType> session;
-            std::shared_ptr<Gameplay::EventHandler> event_queue;
-            std::atomic<int> player_count = 0;
+            static std::shared_ptr<Gameplay::EventHandler> event_handler;
 
         protected:
             
@@ -42,6 +42,11 @@ namespace Core {
             T* create_session_as() {
                 this->session = std::make_unique<T>();
                 return dynamic_cast<T*>(session.get());
+            }
+
+            /* Static method to access shared EventHandler resource during the liftime of program running. */
+            static std::shared_ptr<Gameplay::EventHandler> getEventHandler(){
+                return event_handler;
             }
 
 
@@ -77,16 +82,14 @@ namespace Core {
 
             void process_events();
 
+            void render_game(const std::string &update_string, const std::string &update_value);
+
             void process_input();
 
             void start_gameloop();
 
-            void increment_playercount() {
-                this->player_count++;
-            }
-
-            bool playercount_condition() {
-                return player_count.load() >= 4;
+            bool startgame_condition(size_t num_client) {
+                return num_client >= 4;
             }
 
     };

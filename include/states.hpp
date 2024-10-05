@@ -42,15 +42,12 @@ namespace Core{
             public:
                 virtual ~GameState() = default;
               
-
                 /* Handle any ongoing state logic, such as waiting for player's action, etc...*/
                 virtual void execute_state() = 0;
-                virtual void active_state() = 0;
-                virtual void on_event(Context* context, Event event, NetworkComponentInterface& network) = 0;
-                
+                virtual StateTypes active_state() const = 0;
+                virtual void on_event(Context* context, Event event) = 0;
                 virtual void idle_state() = 0; // idle state should check for conditions iteratively
                 
-
                 void set_context(Context *context){
                     this->context = context;
                 }
@@ -75,8 +72,8 @@ namespace Core{
                     this->state->set_context(this);
                 }
 
-                void active_state() {
-                    this->state->active_state(); 
+                StateTypes active_state() const {
+                    return this->state->active_state(); 
                 }
 
                 void execute_state() {
@@ -87,8 +84,8 @@ namespace Core{
                     this->state->idle_state();
                 }
 
-                void event_handler(Event event, NetworkComponentInterface& network) {
-                    this->state->on_event(this, event, network);
+                void event_handler(Event event) {
+                    this->state->on_event(this, event);
                 }
 
                 StateCondition& get_conditions() {

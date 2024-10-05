@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <vector>
 #include "player.hpp"
 
@@ -32,7 +33,17 @@ namespace Core {
          * Send the player's actions to the host via the 'Client' member.
          * Receives Updates, by listening for updates from the host and updates the local game state.
          */
-        this->state_context->execute_state();
+        if (this->state_context){
+            this->state_context->execute_state();
+        }
+    }
+
+    std::string Player::show_cards(){
+        std::stringstream ss;
+        for (auto card : this->red_cards){
+            ss << card <<"\n";
+        }
+        return ss.str();
     }
 
     void Player::switch_state(std::unique_ptr<Gameplay::GameState> new_state){
@@ -43,6 +54,14 @@ namespace Core {
         this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
     }
 
+    void Player::synchronize_game(){
+        //1. First we send RPCType::DealCard to obtain the individual player cards.
+        //2. Secondly 
+        auto msg = Network::create_message(Network::MessageType::Request, Network::RPCType::DealCard, "7");
+        auto byte_message = Network::serialize_message(msg);
+        get_network_as<Network::Client>()->send_message_test(byte_message);
+    }
+
     void Player::send_request(){
         Network::Message msg;
         msg.type = Network::MessageType::Request;
@@ -50,8 +69,14 @@ namespace Core {
         msg.payload = "This is a Player message test!";
         auto byte_message = Network::serialize_message(msg);
         get_network_as<Network::Client>()->send_message_test(byte_message);
-        
         //this->network->send_message(const std::string &msg_payload)
+    }
+
+    bool Player::is_in_state(Gameplay::StateTypes state_type) const {
+        if (this->state_context){
+            return this->state_context->active_state() == state_type;
+        }
+        return false; 
     }
    
 

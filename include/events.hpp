@@ -1,8 +1,10 @@
 #pragma once 
 
+#include "network/message.hpp"
 #include <functional>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <typeinfo>
@@ -14,7 +16,12 @@ namespace Core {
             UserInput,
             NetworkMessage,
             PlayerJoined,
-            StartGame,
+            GameStarted,
+            GameReady,
+            SynchronizeGame,
+            CardPlayed,
+            CardReceived,
+            JudgeVoted,
             // Define more under...
         };
 
@@ -32,20 +39,19 @@ namespace Core {
 
                 void add_callback(Event event, std::function<void()> callback);
                 void trigger_event(Event event);
+                void store_message(const Network::Message& message);
+                Network::Message get_last_message();
 
             private:
                 std::queue<Event> event_queue;
                 mutable std::mutex queue_mutex;
-                std::map<Event, std::function<void()>> callbacks;
-                /*
-                 *  while (!eventQueue.empty()) {
-                        Event event = eventQueue.front();
-                        eventQueue.pop();
-                        context->getState()->handle(context, event);
-                    }
-                 */
-                //std::thread listener(eventListener, &context);
 
+                std::queue<Network::Message> message_queue;
+                mutable std::mutex message_mutex;
+
+                std::map<Event, std::function<void()>> callbacks;
+                
         };
+       
     }
 }

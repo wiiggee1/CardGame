@@ -3,10 +3,14 @@
 #include "network/network_component_interface.hpp"
 #include "states.hpp"
 #include <iostream>
+#include <map>
 #include <typeinfo>
 
 namespace Core {
     namespace Gameplay{
+
+        using PlayerID = int;
+        using Card = std::string;
 
         /**
         * @brief JudgeState class which inherits the GameState interface. 
@@ -22,17 +26,17 @@ namespace Core {
 
                 void execute_state() override;
 
-                void active_state() override{
-                    const std::type_info& type = typeid(this);
-                    std::cout << "Active state: " << type.name() << std::endl;
+                StateTypes active_state() const override{
+                    return StateTypes::Judge;
                 }
 
                 /* Await the players for that round to play their red cards. */
                 void idle_state() override;
                 
-                void on_event(Context *context, Event event, NetworkComponentInterface& network) override; 
+                void on_event(Context *context, Event event) override; 
 
             private:
+                std::map<PlayerID, Card> received_cards;
                 
 
             protected:

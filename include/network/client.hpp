@@ -20,13 +20,10 @@ namespace Core {
                 void send_message(const std::string& msg_payload) override;
                 void send_message_test(const std::vector<uint8_t>& msg_payload);
 
-
                 /* Establish communication with a destination server address (endpoint) */
                 void connect();
 
                 void start_reading();
-
-                 
 
             protected:
 
@@ -36,7 +33,6 @@ namespace Core {
                 //boost::asio::ip::tcp::resolver resolv;
                 //NOTE: Should I use 'streambuf' or fixed buffer like an char array?
                 char client_buffer[1024];
-                std::shared_ptr<Gameplay::EventHandler> event_queue;
                 //std::vector<char> client_buffer(1024);
                
                   

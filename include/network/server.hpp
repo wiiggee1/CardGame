@@ -41,10 +41,11 @@ namespace Core {
                     return this->clients;
                 }
 
-                void set_callback(EventCallback event_callback){
+                void set_connection_callback(EventCallback event_callback){
                     this->callback = event_callback;
                 }
 
+                /* Trigger the event callback whenever a new connection occurs. */
                 void trigger_event(){
                     if (callback) {
                         callback();
@@ -57,7 +58,6 @@ namespace Core {
                 boost::asio::ip::tcp::acceptor conn_acceptor;
                 PlayerClient clients;
                 EventCallback callback;
-                std::shared_ptr<Gameplay::EventHandler> event_queue;
 
         };
     }

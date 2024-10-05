@@ -12,7 +12,7 @@ namespace Core {
         * @brief PlayerState class which inherits the GameState interface. 
         * This class act as a unique state during the game, and allow only specific actions.
         */
-        class PlayerState : public Gameplay::GameState{
+        class PlayingState : public Gameplay::GameState{
             public:
                 void playcard();
                 
@@ -21,13 +21,13 @@ namespace Core {
 
                 void execute_state() override;
 
-                void active_state() override{
-                    const std::type_info& type = typeid(this);
-                    std::cout << "Active state: " << type.name() << std::endl;
+                StateTypes active_state() const override{
+                    return StateTypes::Playing;
                 }
 
+
                 void idle_state() override;
-                void on_event(Context *context, Event event,  NetworkComponentInterface& network) override;
+                void on_event(Context *context, Event event) override;
 
             private:
                 

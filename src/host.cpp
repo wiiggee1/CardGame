@@ -1,5 +1,8 @@
 #pragma once 
 
+#include "events.hpp"
+#include "game.hpp"
+#include "network/message.hpp"
 #include "network/server.hpp"
 #include "sessiontype.hpp"
 #include <algorithm>
@@ -15,15 +18,17 @@ namespace Core {
     void Host::setup_session(){
         std::cout << "Setting up the Host-Session - by calling network->initialize()..." << std::endl;
 
-        get_network_as<Network::Server>()->set_callback([this](){
+        get_network_as<Network::Server>()->set_connection_callback([this](){
             std::cout << "This callback is invoked whenever a new client has joined!" << std::endl;
             auto clients = get_network_as<Network::Server>()->get_clients();
-            this->num_players++;
+            this->client_count++;
             std::cout << "Number of connected Clients: " << clients.size() << std::endl;
+            Game::getEventHandler()->push_event(Gameplay::Event::PlayerJoined);
 
             //TODO: - Send num_players update back to the client... Fix this logic to send to all sockets
-            std::string player_count = std::format("Connected players: {}", num_players);
-            get_network_as<Network::Server>()->send_message(player_count);
+            
+            //std::string player_count = std::format("Connected players: {}", client_count);
+            //get_network_as<Network::Server>()->send_message(player_count);
         });
 
         network->initialize();
@@ -61,12 +66,31 @@ namespace Core {
 
     }
 
+    void Host::loadgame_request(){
+        auto server = this->get_network_as<Network::Server>();
+        
+        std::string payload = "We will randomize who will start as Judge";
+        auto msg = Network::create_message(
+                Network::MessageType::Request, 
+                Network::RPCType::LoadGame, 
+                payload);
+
+        auto byte_message = Network::serialize_message(msg);
+
+        for(auto& client : server->get_clients()){
+            client->write_to_client(byte_message);
+        }
+    }
+
     void Host::startgame_message(){
         auto server = this->get_network_as<Network::Server>();
-        Network::Message msg;
-        msg.type = Network::MessageType::Request;
-        msg.rpc_type = Network::RPCType::StartGame;
-        msg.payload = "YOU ARE NOT judge";
+        
+        std::string payload = "We will randomize who will start as Judge";
+        auto msg = Network::create_message(
+                Network::MessageType::Request, 
+                Network::RPCType::StartGame, 
+                payload);
+
         auto byte_message = Network::serialize_message(msg); 
 
         for(auto& client : server->get_clients()){

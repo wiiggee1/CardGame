@@ -13,8 +13,10 @@
 #include <ctime>
 #include <format>
 #include <iostream>
+#include <string>
 #include "network/session_connections.hpp"
 #include "events.hpp"
+#include "game.hpp"
 #include "network/message.hpp"
 
 namespace Core {
@@ -45,16 +47,13 @@ namespace Core {
                     
                     print_bytemessage(received_bytes);
 
-                    // TODO: Add message handler processing of incoming requests below...
-                    // Add here... 
-                   
                     //WARN: Only for testing sending back response to the client sender. 
                     auto msg = deserialize_message(received_bytes);
                     msg.type = MessageType::Response;
                     msg.payload = "Received OK";
-                    
-                    
-                    trigger_callback(Gameplay::Event event_type);
+                   
+                    handle_request(msg); 
+                    //trigger_callback(Gameplay::Event::);
                     
                     auto response_msg = serialize_message(msg);
                     write_to_client(response_msg);
@@ -102,6 +101,41 @@ namespace Core {
                     tcp_socket.remote_endpoint().port()
             );
             return client_endpoint;
+        }
+
+        void SessionConnection::handle_request(const Message& message){
+            auto event_queue = Core::Game::getEventHandler();
+            
+            switch (message.rpc_type){
+                case Core::Network::RPCType::NewConnection: {
+                    break; 
+                }
+                case Core::Network::RPCType::StartGame: {
+                    event_queue->push_event(Gameplay::Event::GameStarted);
+                    break;
+                }
+                case Core::Network::RPCType::DealCard: {
+                    event_queue->push_event(Gameplay::Event::CardReceived);
+                    int num_cards = std::stoi(message.payload);
+
+                    //TODO: - run the join_string on std::vector<std::string> of card slices
+
+                    event_queue->store_message(message);
+                    break;
+                }
+                case Core::Network::RPCType::LoadGame: {
+                    break;
+                }
+                case Core::Network::RPCType::EnterWaiting: {
+                    break;
+                }                                       
+                case Core::Network::RPCType::PlayCard: {
+                    break;
+                }
+                case Core::Network::RPCType::Vote: {
+                    break;
+                }
+            }
         }
        
 

@@ -15,13 +15,12 @@ namespace Core {
                 // Check if any status update is needed or if any other condition has been met
                 void execute_state() override;
 
-                void active_state() override{
-                    const std::type_info& type = typeid(this);
-                    std::cout << "Active state: " << type.name() << std::endl;
+                StateTypes active_state() const override{
+                    return StateTypes::WaitingForPlayers;
                 }
 
                 void idle_state() override;
-                void on_event(Context *context, Event event, NetworkComponentInterface& network) override;
+                void on_event(Context *context, Event event) override;
                 bool enough_players();
 
             private:

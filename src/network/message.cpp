@@ -4,6 +4,7 @@
 #include <cstring>
 #include <format>
 #include <iomanip>
+#include <iterator>
 #include <sstream>
 #include <iostream>
 #include <cstddef>
@@ -17,7 +18,15 @@ namespace Core {
     namespace Network {
 
         using namespace boost::asio::buffer_literals;
-       
+
+        Message create_message(MessageType msg_type, RPCType rpc_type, std::string payload){
+            Message msg;
+            msg.type = msg_type;
+            msg.rpc_type = rpc_type;
+            msg.payload = payload;
+            return msg;
+        }
+
         std::vector<uint8_t> serialize_message(const Message& message){
             
             auto header_bytesize = sizeof(message.type) + sizeof(message.rpc_type);
@@ -79,6 +88,30 @@ namespace Core {
 
             return msg;
         }
+
+        std::string join_strings(const std::vector<std::string>& vec, char delimiter = ','){
+            std::ostringstream oss;
+            std::copy(vec.begin(), vec.end(), std::ostream_iterator<std::string>(oss, &delimiter));
+            std::string joined_string = oss.str();
+
+            if (!joined_string.empty()){
+                joined_string.pop_back();
+            }
+            return joined_string;
+        }
+
+        std::vector<std::string> split_string(const std::string& str, char delimiter = ','){
+            std::vector<std::string> string_vec;
+            std::istringstream iss(str);
+            std::string token;
+
+            while (std::getline(iss, token, delimiter)){
+                string_vec.push_back(token);
+            }
+
+            return string_vec;
+        }
+
 
         void print_message(const Message &msg){
             //std::cout << "MessageType: " << static_cast<int>(msg.type) << std::endl;

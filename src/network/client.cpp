@@ -1,6 +1,7 @@
 #pragma once
 
 #include "events.hpp"
+#include "game.hpp"
 #include "network/message.hpp"
 #include "network/network_component_interface.hpp"
 #include <array>
@@ -67,18 +68,28 @@ namespace Core {
 
         void Client::handle_message(const Core::Network::Message& message){
             /* Map external RPC message events to internal events, and add to shared event queue. */ 
+            auto event_queue = Core::Game::getEventHandler();
             switch (message.rpc_type){
                 case Core::Network::RPCType::NewConnection: {
                     event_queue->push_event(Gameplay::Event::PlayerJoined); 
                     break; 
                 }
                 case Core::Network::RPCType::StartGame: {
-                    event_queue->push_event(Gameplay::Event::StartGame);
+                    event_queue->push_event(Gameplay::Event::GameStarted);
                     break;
                 }
                 case Core::Network::RPCType::DealCard: {
+                    event_queue->push_event(Gameplay::Event::CardReceived);
+                    event_queue->store_message(message);
                     break;
                 }
+                case Core::Network::RPCType::LoadGame: {
+                    event_queue->push_event(Gameplay::Event::SynchronizeGame);
+                    break;
+                }
+                case Core::Network::RPCType::EnterWaiting: {
+                    break;
+                }                                       
                 case Core::Network::RPCType::PlayCard: {
                     break;
                 }
@@ -139,8 +150,6 @@ namespace Core {
                     std::string received_data(this->client_buffer, this->client_buffer+byte_size);
                     std::vector<uint8_t> received_bytes(this->client_buffer, this->client_buffer+byte_size);
 
-                    //std::cout << std::setw(1) << std::left << ANSI_BOLD <<  get_endpoint_string(this->client_socket) << ANSI_COLOR_RESET << "\n" <<  std::endl;
-                   
                     std::cout << std::setw(1) << std::left << ANSI_BOLD << ANSI_COLOR_GREEN << get_endpoint_string(this->client_socket) << ANSI_COLOR_RESET << "" <<  std::endl;
                     
                     //std::cout << get_endpoint_string(this->client_socket) << std::endl;
