@@ -25,13 +25,16 @@ namespace Core {
 
                 void start_reading();
 
+                unsigned short get_client_id(){
+                    return client_id;
+                }
+
             protected:
 
             private:
                 boost::asio::io_context& io_ctx;
                 boost::asio::ip::tcp::socket client_socket;
-                //boost::asio::ip::tcp::resolver resolv;
-                //NOTE: Should I use 'streambuf' or fixed buffer like an char array?
+                unsigned short client_id; 
                 char client_buffer[1024];
                 //std::vector<char> client_buffer(1024);
                

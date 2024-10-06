@@ -41,6 +41,12 @@ namespace Core {
                     return this->clients;
                 }
 
+                unsigned short get_server_id(){
+                    return this->server_id;
+                }
+
+                std::shared_ptr<SessionConnection> get_target_client(unsigned short connection_id); 
+
                 void set_connection_callback(EventCallback event_callback){
                     this->callback = event_callback;
                 }
@@ -56,6 +62,7 @@ namespace Core {
             private:
                 boost::asio::io_context& host_io_context;
                 boost::asio::ip::tcp::acceptor conn_acceptor;
+                unsigned short server_id; 
                 PlayerClient clients;
                 EventCallback callback;
 

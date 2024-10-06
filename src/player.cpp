@@ -1,5 +1,6 @@
 #pragma once 
 
+#include "joingame_state.hpp"
 #include "network/client.hpp"
 #include "network/message.hpp"
 #include "sessiontype.hpp"
@@ -15,8 +16,7 @@
 namespace Core {
 
     using namespace boost::asio::buffer_literals;
-    
-
+   
     void Player::setup_session(){
         std::cout << "Setting up the Player Session - by calling network->initialize()..." << std::endl;
         network->initialize();
@@ -43,6 +43,7 @@ namespace Core {
         for (auto card : this->red_cards){
             ss << card <<"\n";
         }
+        std::cout << "Red cards: \n" << ss.str() << std::endl;
         return ss.str();
     }
 
@@ -57,7 +58,28 @@ namespace Core {
     void Player::synchronize_game(){
         //1. First we send RPCType::DealCard to obtain the individual player cards.
         //2. Secondly 
-        auto msg = Network::create_message(Network::MessageType::Request, Network::RPCType::DealCard, "7");
+        
+        auto msg_id = get_network_as<Network::Client>()->get_client_id();
+        auto msg = Network::create_message(Network::MessageType::Request, msg_id, Network::RPCType::DealCard, "7");
+        auto byte_message = Network::serialize_message(msg);
+        get_network_as<Network::Client>()->send_message_test(byte_message);
+    }
+
+    void Player::request_cards(int num_cards){
+        auto msg_id = get_network_as<Network::Client>()->get_client_id();
+        int modified_num_cards = num_cards;
+
+        while(true){
+            if (this->red_cards.size() + modified_num_cards <= 7){
+                break; 
+            }else{
+                modified_num_cards--;
+            }
+        }
+        
+        std::cout << "In 'request_cards' logic, modified_num_cards: " << modified_num_cards << std::endl;
+        auto amount_payload = std::to_string(static_cast<int>(modified_num_cards));
+        auto msg = Network::create_message(Network::MessageType::Request, msg_id, Network::RPCType::DealCard, amount_payload);
         auto byte_message = Network::serialize_message(msg);
         get_network_as<Network::Client>()->send_message_test(byte_message);
     }

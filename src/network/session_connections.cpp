@@ -27,8 +27,8 @@ namespace Core {
 
         SessionConnection::SessionConnection(tcp::socket socket, Server& server)
             : tcp_socket(std::move(socket)), server_ref(server){
-            
-                // Constructor body here...
+                this->connection_id = (unsigned short)this->tcp_socket.remote_endpoint().port();
+                std::cout << "New SessionConnection was created with ID: " << connection_id << std::endl;
         }
 
         void SessionConnection::start_reading(){
@@ -49,14 +49,15 @@ namespace Core {
 
                     //WARN: Only for testing sending back response to the client sender. 
                     auto msg = deserialize_message(received_bytes);
-                    msg.type = MessageType::Response;
-                    msg.payload = "Received OK";
-                   
+                    
+
+                    // USE THIS as unique ID for pushing to the EventHandler queue. 
+                    
                     handle_request(msg); 
                     //trigger_callback(Gameplay::Event::);
                     
-                    auto response_msg = serialize_message(msg);
-                    write_to_client(response_msg);
+                    //auto response_msg = serialize_message(msg);
+                    //write_to_client(response_msg);
                     
                 
                 }else if (errcode == boost::asio::error::eof){
@@ -108,19 +109,23 @@ namespace Core {
             
             switch (message.rpc_type){
                 case Core::Network::RPCType::NewConnection: {
+                    std::cout << "RPC NewConnection" << std::endl;
                     break; 
                 }
                 case Core::Network::RPCType::StartGame: {
-                    event_queue->push_event(Gameplay::Event::GameStarted);
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
                     break;
                 }
+                case Core::Network::RPCType::NewRound: {
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    event_queue->store_eventmessage(Gameplay::Event::NextRound, message);
+                    break;
+                }                                        
                 case Core::Network::RPCType::DealCard: {
-                    event_queue->push_event(Gameplay::Event::CardReceived);
-                    int num_cards = std::stoi(message.payload);
-
-                    //TODO: - run the join_string on std::vector<std::string> of card slices
-
-                    event_queue->store_message(message);
+                    //event_queue->push_event(Gameplay::Event::CardRequest);
+                    std::cout << "RPC DealCard" << std::endl;
+                    event_queue->store_eventmessage(Gameplay::Event::CardRequest, message);
                     break;
                 }
                 case Core::Network::RPCType::LoadGame: {
@@ -130,9 +135,12 @@ namespace Core {
                     break;
                 }                                       
                 case Core::Network::RPCType::PlayCard: {
+                    //event_queue->push_event(Gameplay::Event::CardReceived);
+                    event_queue->store_eventmessage(Gameplay::Event::CardPlayed, message);
                     break;
                 }
                 case Core::Network::RPCType::Vote: {
+                    event_queue->store_eventmessage(Gameplay::Event::JudgeVoted, message);
                     break;
                 }
             }

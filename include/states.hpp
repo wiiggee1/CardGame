@@ -28,6 +28,7 @@ namespace Core{
             Playing,            // This is playing state if you're not in 'judge state'.
             Judge,              // Other playing state but whenever you are the judge.
             Idle,               // Idle state for clients to wait for the new round, this will print status.
+            Error,
         };
 
         struct StateCondition {
@@ -101,5 +102,33 @@ namespace Core{
                 std::unique_ptr<GameState> state;
                 StateCondition conditions;
         };
+        
+        constexpr const char* StateTypeToString(StateTypes state_type){
+            switch (state_type) {
+                case Core::Gameplay::StateTypes::Idle: return "Idle";
+                case Core::Gameplay::StateTypes::Judge: return "Judge";
+                case Core::Gameplay::StateTypes::Playing: return "Playing";
+                case Core::Gameplay::StateTypes::WaitingForPlayers: return "Waiting";
+                case Core::Gameplay::StateTypes::Error: return "Error";
+
+            }
+        }
+
+        constexpr StateTypes StringToStateType(std::string state_string){
+            if (state_string == "Idle"){
+                return StateTypes::Idle;
+            } else if (state_string == "Judge"){
+                return StateTypes::Judge;
+            }else if (state_string == "Playing"){
+                return StateTypes::Playing;
+            }else if (state_string == "Waiting") {
+                return StateTypes::WaitingForPlayers;
+            }else {
+                return StateTypes::Error; 
+            }
+            
+        }
+
     }
+
 }

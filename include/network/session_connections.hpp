@@ -28,6 +28,10 @@ namespace Core {
                     this->network_callback = event_callback;
                 }
 
+                unsigned short get_id(){
+                    return this->connection_id;
+                }
+
                 void trigger_callback(Gameplay::Event event_type){
                     if (network_callback) {
                         network_callback(event_type);
@@ -38,6 +42,7 @@ namespace Core {
 
             private:
                 boost::asio::ip::tcp::socket tcp_socket;
+                unsigned short connection_id; 
                 char socket_buffer[1024];
                 Server& server_ref;
                 NetworkEventCallback network_callback; //On network message callback 

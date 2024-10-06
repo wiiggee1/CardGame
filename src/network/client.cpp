@@ -38,10 +38,12 @@ namespace Core {
                     auto local_endpoint = client_socket.local_endpoint();
                     auto addr = local_endpoint.address().to_string();
                     auto port = local_endpoint.port();
+                    this->client_id = (unsigned short)port;
 
                     std::cout << "Client created, with Local Endpoint: " << addr+":" << port << std::endl;
                     std::cout << "Connected to Server Endpoint: " << get_endpoint_string(client_socket) << std::endl;
-                
+                    
+
                 }catch(boost::system::error_code& connection_error) {
                     std::cerr << "Error Connecting to Server: " << connection_error.message() << std::endl;
                 } 
@@ -71,20 +73,31 @@ namespace Core {
             auto event_queue = Core::Game::getEventHandler();
             switch (message.rpc_type){
                 case Core::Network::RPCType::NewConnection: {
-                    event_queue->push_event(Gameplay::Event::PlayerJoined); 
+                    //event_queue->push_event(Gameplay::Event::PlayerJoined); 
+                    event_queue->store_eventmessage(Gameplay::Event::PlayerJoined, message);
                     break; 
                 }
                 case Core::Network::RPCType::StartGame: {
-                    event_queue->push_event(Gameplay::Event::GameStarted);
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
+                    break;
+                }
+                                                     
+                case Core::Network::RPCType::NewRound: {
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    event_queue->store_eventmessage(Gameplay::Event::NextRound, message);
                     break;
                 }
                 case Core::Network::RPCType::DealCard: {
-                    event_queue->push_event(Gameplay::Event::CardReceived);
-                    event_queue->store_message(message);
+                    //event_queue->push_event(Gameplay::Event::CardReceived);
+                    //event_queue->store_message(message);
+                    std::cout << "RPC DealCard" << std::endl;
+                    event_queue->store_eventmessage(Gameplay::Event::CardReceived, message);
                     break;
                 }
                 case Core::Network::RPCType::LoadGame: {
-                    event_queue->push_event(Gameplay::Event::SynchronizeGame);
+                    //event_queue->push_event(Gameplay::Event::SynchronizeGame);
+                    event_queue->store_eventmessage(Gameplay::Event::SynchronizeGame, message);     
                     break;
                 }
                 case Core::Network::RPCType::EnterWaiting: {
@@ -94,6 +107,8 @@ namespace Core {
                     break;
                 }
                 case Core::Network::RPCType::Vote: {
+                    event_queue->store_eventmessage(Gameplay::Event::StartVote, message);     
+
                     break;
                 }
             }

@@ -1,6 +1,7 @@
 #include "events.hpp"
 #include <memory>
 #include <mutex>
+#include <tuple>
 
 namespace Core {
 
@@ -27,6 +28,11 @@ namespace Core {
             return this->event_queue.empty();
         }
 
+        bool EventHandler::eventmsg_empty(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            return this->eventmsg_queue.empty();
+        }
+
         void EventHandler::add_callback(Event event, std::function<void()> callback) {
             this->callbacks[event] = callback;
         }
@@ -42,6 +48,22 @@ namespace Core {
             message_queue.push(message);
         }
 
+        void EventHandler::store_eventmessage(Event event, const Network::Message& message){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            auto event_message = std::make_tuple(event, message);
+            this->eventmsg_queue.push(event_message);
+        }
+
+        std::tuple<Event, Network::Message> EventHandler::get_eventmessage(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            if(!eventmsg_queue.empty()){
+                auto [event, message] = eventmsg_queue.front();
+                eventmsg_queue.pop();
+                return std::make_tuple(event, message);
+            }
+            return {};
+        }
+
         Network::Message EventHandler::get_last_message(){
             std::lock_guard<std::mutex> lock(message_mutex);
             if (!message_queue.empty()){
@@ -51,6 +73,16 @@ namespace Core {
             }
             return {};
         }
+
+        Event EventHandler::read_latest_event(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            if(!eventmsg_queue.empty()){
+                auto [event, message] = eventmsg_queue.front();
+                return event;
+            }
+            return {};
+        }
+
 
     } 
 }

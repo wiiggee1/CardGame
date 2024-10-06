@@ -29,8 +29,9 @@ namespace Core {
         #define ANSI_BOLD_BLUE "\x1b[1;34m"
         #define ANSI_BOLD_YELLOW "\x1b[1;33m"
         #define ANSI_BOLD_CYAN "\x1b[1;36m"
-        
-        //NOTE: - Should I add additional types such as if its a 'Card' = string type, or int type...?
+       
+
+
         enum class MessageType : uint8_t {
             Request = 1, 
             Response = 2
@@ -41,6 +42,7 @@ namespace Core {
             Vote,
             NewConnection,
             StartGame,
+            NewRound,
             PlayCard,
             LoadGame, //Initializing the game, server send cards to players.
             EnterWaiting, // Enter waiting (idle) state for waiting for judge to vote.
@@ -48,11 +50,12 @@ namespace Core {
 
         struct Message{
             MessageType type;
+            unsigned short id;
             RPCType rpc_type;
             std::string payload;
         };
 
-        Message create_message(MessageType msg_type, RPCType rpc_type, std::string payload);
+        Message create_message(MessageType msg_type, unsigned short msg_id, RPCType rpc_type, std::string payload);
 
         std::vector<uint8_t> serialize_message(const Message& message);
 
@@ -68,6 +71,7 @@ namespace Core {
         void print_bytemessage(const std::vector<uint8_t>& data_bytes);
         std::string join_strings(const std::vector<std::string>& vec, char delimiter);
         std::vector<std::string> split_string(const std::string& str, char delimiter);
+
     }
 }
 

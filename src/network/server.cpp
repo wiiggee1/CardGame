@@ -22,13 +22,12 @@ namespace Core {
         Server::Server(io_context& iocontext, tcp::endpoint srv_endpoint)
             : host_io_context(iocontext), conn_acceptor(iocontext, srv_endpoint)
         {
-         
             uint16_t port = 2048;
             auto endpoint = tcp::endpoint(tcp::v4(), port);
-
             tcp::endpoint local_endpoint = conn_acceptor.local_endpoint();
-            std::cout <<"Server initialized, and listening on: "<< local_endpoint.address().to_string()+":"<<local_endpoint.port()<< std::endl;
+            this->server_id = (unsigned short)local_endpoint.port();
             
+            std::cout <<"Server initialized, and listening on: "<< local_endpoint.address().to_string()+":"<<local_endpoint.port()<< std::endl;
         }
         
         void Server::initialize(){
@@ -72,6 +71,9 @@ namespace Core {
                     std::cout << "New connection session from: " << remote_addr+":" << remote_port << "\n";
                         
                     auto new_connection = std::make_shared<SessionConnection>(std::move(socket), *this);
+                    int client_id = (int)remote_port;
+
+                     
                     clients.push_back(new_connection);
 
 
@@ -101,6 +103,14 @@ namespace Core {
                 
         }
 
+        std::shared_ptr<SessionConnection> Server::get_target_client(unsigned short connection_id){
+            for (auto target_client: this->clients){
+                if (target_client->get_id() == connection_id){
+                    return target_client;
+                }
+            }
+            return nullptr;
+        }
            
     }
 }

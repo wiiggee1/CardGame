@@ -31,6 +31,7 @@ tests/CMakeFiles/tests.dir/game_test.cpp.o: tests/game_test.cpp \
   include/joingame_state.hpp \
   include/judge_state.hpp \
   include/network/client.hpp \
+  include/network/message.hpp \
   include/network/network_component_interface.hpp \
   include/network/server.hpp \
   include/network/session_connections.hpp \
@@ -2229,6 +2230,8 @@ tests/CMakeFiles/tests.dir/game_test.cpp.o: tests/game_test.cpp \
 
 /usr/include/boost/test/detail/throw_exception.hpp:
 
+/usr/include/boost/test/detail/suppress_warnings.hpp:
+
 /usr/include/boost/date_time/posix_time/date_duration_operators.hpp:
 
 /usr/include/c++/14.2.1/new:
@@ -2869,14 +2872,6 @@ _deps/cli11_proj-src/include/CLI/impl/StringTools_inl.hpp:
 
 /usr/include/bits/sigstack.h:
 
-/usr/include/boost/asio/execution/relationship.hpp:
-
-/usr/include/boost/asio/ip/resolver_query_base.hpp:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/placeholders.hpp:
-
-/usr/include/boost/mpl/aux_/na_assert.hpp:
-
 /usr/include/boost/asio/detail/completion_payload.hpp:
 
 /usr/include/bits/netdb.h:
@@ -2941,6 +2936,10 @@ include/network/network_component_interface.hpp:
 
 /usr/include/bits/confname.h:
 
+/usr/include/asm/unistd.h:
+
+/usr/include/boost/asio/compose.hpp:
+
 /usr/include/boost/asio/detail/timed_cancel_op.hpp:
 
 /usr/include/boost/mpl/quote.hpp:
@@ -2966,10 +2965,6 @@ _deps/cli11_proj-src/include/CLI/impl/Validators_inl.hpp:
 /usr/include/bits/stdint-least.h:
 
 /usr/include/bits/setjmp.h:
-
-/usr/include/asm/unistd.h:
-
-/usr/include/boost/asio/compose.hpp:
 
 /usr/include/bits/cpu-set.h:
 
@@ -3069,6 +3064,30 @@ include/sessiontype.hpp:
 
 /usr/include/boost/asio/traits/require_free.hpp:
 
+/usr/include/boost/asio/ip/resolver_base.hpp:
+
+/usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/time_members.h:
+
+/usr/include/boost/asio/connect.hpp:
+
+/usr/include/boost/asio/detail/throw_exception.hpp:
+
+/usr/include/bits/sockaddr.h:
+
+/usr/include/bits/endian.h:
+
+/usr/include/c++/14.2.1/bits/shared_ptr.h:
+
+/usr/include/boost/numeric/conversion/numeric_cast_traits.hpp:
+
+/usr/include/boost/test/tree/traverse.hpp:
+
+/usr/include/boost/preprocessor/variadic/limits/elem_64.hpp:
+
+/usr/include/boost/test/impl/plain_report_formatter.ipp:
+
+/usr/include/boost/smart_ptr/detail/local_counted_base.hpp:
+
 /usr/include/boost/test/execution_monitor.hpp:
 
 /usr/include/bits/epoll.h:
@@ -3156,30 +3175,6 @@ _deps/cli11_proj-src/include/CLI/TypeTools.hpp:
 /usr/include/boost/asio/execution/context.hpp:
 
 /usr/include/boost/asio/detail/reactive_socket_accept_op.hpp:
-
-/usr/include/boost/asio/ip/resolver_base.hpp:
-
-/usr/include/boost/asio/detail/throw_exception.hpp:
-
-/usr/include/bits/sockaddr.h:
-
-/usr/include/bits/endian.h:
-
-/usr/include/c++/14.2.1/bits/shared_ptr.h:
-
-/usr/include/boost/numeric/conversion/numeric_cast_traits.hpp:
-
-/usr/include/boost/test/tree/traverse.hpp:
-
-/usr/include/boost/preprocessor/variadic/limits/elem_64.hpp:
-
-/usr/include/boost/test/impl/plain_report_formatter.ipp:
-
-/usr/include/boost/smart_ptr/detail/local_counted_base.hpp:
-
-/usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/time_members.h:
-
-/usr/include/boost/asio/connect.hpp:
 
 /usr/include/bits/termios-misc.h:
 
@@ -3747,6 +3742,14 @@ _deps/cli11_proj-src/include/CLI/impl/Option_inl.hpp:
 
 /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_long_long.hpp:
 
+/usr/include/boost/asio/execution/relationship.hpp:
+
+/usr/include/boost/asio/ip/resolver_query_base.hpp:
+
+/usr/include/boost/mpl/aux_/preprocessed/gcc/placeholders.hpp:
+
+/usr/include/boost/mpl/aux_/na_assert.hpp:
+
 /usr/include/c++/14.2.1/sstream:
 
 /usr/include/boost/asio/ip/tcp.hpp:
@@ -4313,6 +4316,8 @@ _deps/cli11_proj-src/include/CLI/Config.hpp:
 
 /usr/include/boost/asio/ip/host_name.hpp:
 
+include/network/message.hpp:
+
 /usr/include/boost/smart_ptr/allocate_shared_array.hpp:
 
 /usr/include/assert.h:
@@ -4776,5 +4781,3 @@ _deps/cli11_proj-src/include/CLI/FormatterFwd.hpp:
 /usr/include/boost/system/system_error.hpp:
 
 /usr/include/boost/test/detail/pp_variadic.hpp:
-
-/usr/include/boost/test/detail/suppress_warnings.hpp:

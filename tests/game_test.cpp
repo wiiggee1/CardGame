@@ -16,6 +16,7 @@
 #include "judge_state.hpp"
 #include "network/client.hpp"
 #include "network/server.hpp"
+#include "network/message.hpp"
 #include "play_state.hpp"
 #include "player.hpp"
 #include "states.hpp"
@@ -23,7 +24,6 @@
 
 #include <iostream>
 #include <typeinfo>
-
 
 using namespace boost::unit_test;
 using namespace Core::Gameplay;
@@ -34,8 +34,8 @@ BOOST_AUTO_TEST_SUITE(test1_suite)
     BOOST_AUTO_TEST_CASE(PlayerStateTransistionTest){
 
         // DEBUGGING THE STATE TRANSITION LOGIC BELOW:
-        Core::Player player;
-        player.setup_context(std::make_unique<PlayerState>());
+        //Core::Player player;
+        //player.setup_context(std::make_unique<PlayingState>());
         //BOOST_CHECK_EQUAL(player.get_context(), std::make_unique<PlayerState>());
 
         /*
@@ -94,17 +94,20 @@ BOOST_AUTO_TEST_SUITE(test1_suite)
     }
 
     BOOST_AUTO_TEST_CASE(MessageSerializationTest){
+       
         /*
         std::cout << "Running test_serialization logic: \n" << std::endl;
-        Network::Message msg;
-        msg.type = Network::MessageType::Request;
-        msg.rpc_type = Network::RPCType::DealCard;
+        Core::Network::Message msg;
+        msg.type = Core::Network::MessageType::Request;
+        msg.id = 1234;
+        msg.rpc_type = Core::Network::RPCType::DealCard;
         msg.payload = "This is a Player message test!";
-        auto byte_message = Network::serialize_message(msg);
+        auto byte_message = Core::Network::serialize_message(msg);
 
         std::cout << "Testing deserialization logic: \n" << std::endl;
-        auto decoded_msg = Network::deserialize_message(byte_message);
+        auto decoded_msg = Core::Network::deserialize_message(byte_message);
         */
+        
     }
 
 

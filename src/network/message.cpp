@@ -19,9 +19,10 @@ namespace Core {
 
         using namespace boost::asio::buffer_literals;
 
-        Message create_message(MessageType msg_type, RPCType rpc_type, std::string payload){
+        Message create_message(MessageType msg_type, unsigned short msg_id, RPCType rpc_type, std::string payload){
             Message msg;
             msg.type = msg_type;
+            msg.id = msg_id;
             msg.rpc_type = rpc_type;
             msg.payload = payload;
             return msg;
@@ -29,7 +30,7 @@ namespace Core {
 
         std::vector<uint8_t> serialize_message(const Message& message){
             
-            auto header_bytesize = sizeof(message.type) + sizeof(message.rpc_type);
+            auto header_bytesize = sizeof(message.type) + sizeof(message.id) + sizeof(message.rpc_type);
             auto payload_size = message.payload.size();
             std::vector<uint8_t> sending_buffer(header_bytesize + sizeof(uint32_t) + payload_size);
             
@@ -39,11 +40,12 @@ namespace Core {
              * Both objects are reinterpreted as arrays of unsigned char
              */
             std::memcpy(sending_buffer.data(), &message.type, sizeof(message.type));
-            std::memcpy(sending_buffer.data() + sizeof(message.type), &message.rpc_type, sizeof(message.rpc_type));
+            std::memcpy(sending_buffer.data() + sizeof(message.type), &message.id, sizeof(message.id));
+            std::memcpy(sending_buffer.data() + sizeof(message.type) + sizeof(message.id), &message.rpc_type, sizeof(message.rpc_type));
+            
             std::memcpy(sending_buffer.data() + header_bytesize, &payload_size, sizeof(uint32_t));
-            std::memcpy(sending_buffer.data() + header_bytesize+sizeof(uint32_t), message.payload.data(), payload_size);
+            std::memcpy(sending_buffer.data() + header_bytesize + sizeof(uint32_t), message.payload.data(), payload_size);
 
-            //TODO: How should I deserialize the sequence of byte of std::vector<uint8_t> to std::string?
             //std::string payload_data(sending_buffer.data()+header_bytesize, message.payload.size()); 
 
             const unsigned char* msgtype_data = static_cast<const unsigned char*>(sending_buffer.data());
@@ -64,18 +66,21 @@ namespace Core {
             return sending_buffer;
         }
 
-
+        //TODO: - Fix logic with the added struct 'id' field
         Message deserialize_message(const std::vector<uint8_t>& data_bytes){
             Message msg;
-            size_t header_bytesize = sizeof(msg.type) + sizeof(msg.rpc_type);
+            size_t header_bytesize = sizeof(msg.type) + sizeof(msg.id) + sizeof(msg.rpc_type);
             uint32_t payload_size;
 
             //const unsigned char* byte_as_char = static_cast<const unsigned char*>(data_bytes.data());
             std::string byte_as_str(data_bytes.begin(), data_bytes.end());
             std::vector<uint8_t> header_slice(data_bytes.begin(), data_bytes.begin() + header_bytesize);
 
-            std::memcpy(&msg.type, data_bytes.data(), sizeof(msg.type));
-            std::memcpy(&msg.rpc_type, data_bytes.data() + sizeof(msg.type), sizeof(msg.rpc_type));
+            /*std::memcpy -> (dest, src, N)... Copies N bytes from src to dest. */
+            // E.g., dest=ptr(msg.type), src=ptr(data_bytes vector), N=size of msg.type as number of bytes
+            std::memcpy(&msg.type, data_bytes.data(), sizeof(msg.type)); 
+            std::memcpy(&msg.id, data_bytes.data() + sizeof(msg.type), sizeof(msg.id));
+            std::memcpy(&msg.rpc_type, data_bytes.data() + sizeof(msg.type) + sizeof(msg.id), sizeof(msg.rpc_type));
             std::memcpy(&payload_size, data_bytes.data() + header_bytesize, sizeof(uint32_t));
 
             std::string payload_slice(data_bytes.begin() + header_bytesize + sizeof(uint32_t), data_bytes.end());
@@ -83,7 +88,6 @@ namespace Core {
 
             msg.payload = payload_slice;
             //std::cout << "Received Message struct after deserialization: " << std::endl;  
-            //print_subsection("Received Message struct after deserialization", "", ANSI_BOLD_BLUE, ANSI_COLOR_RESET);
             print_message(msg);
 
             return msg;
@@ -124,6 +128,11 @@ namespace Core {
                     std::to_string(static_cast<int>(msg.type)), 
                     title_colorcode,
                     content_colorcode);
+
+            print_subsection("MsgID", 
+                    std::to_string(static_cast<unsigned short>(msg.id)), 
+                    title_colorcode,
+                    content_colorcode);
             
             print_subsection("RPCType", 
                     std::to_string(static_cast<int>(msg.rpc_type)),
@@ -154,8 +163,9 @@ namespace Core {
         }
 
         std::string get_string_message(const Message &message){
-            std::string msg_str = std::format("MessageType: {}\nRPCType: {}\nPayload: {}",
+            std::string msg_str = std::format("MessageType: {}\nId: {}\nRPCType: {}\nPayload: {}",
                     static_cast<int>(message.type), 
+                    static_cast<unsigned short>(message.id),
                     static_cast<int>(message.rpc_type), 
                     message.payload);
             return msg_str;

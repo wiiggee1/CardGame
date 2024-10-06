@@ -27,8 +27,7 @@ namespace Core {
             }
 
             //std::cout << "\033[2J\033[H" << std::flush; // clear the screen
-            std::system("clear"); 
-            
+            //std::system("clear"); 
             
         }
 
@@ -39,8 +38,9 @@ namespace Core {
        
         void JoinGameState::on_event(Context* context, Event event){
             auto& state_conditions = this->context->get_conditions();
+            auto event_handler = Core::Game::getEventHandler();
+            
             if (event == Event::SynchronizeGame) {
-                auto event_handler = Core::Game::getEventHandler();
                 event_handler->trigger_event(event);
 
             }else if (event == Event::GameStarted) {
@@ -48,6 +48,9 @@ namespace Core {
 
             }else if (event == Event::PlayerJoined){
 
+            }else if (event == Event::CardReceived) {
+                std::cout << "Inside JoinGameState and CardReceived Event was invoked!" << std::endl;
+                event_handler->trigger_event(event);
             }
         }
 

@@ -844,7 +844,15 @@ CMakeFiles/apples2apples.dir/src/network/session_connections.cpp.o: \
  /usr/include/boost/asio/detail/dependent_type.hpp \
  /usr/include/c++/14.2.1/iostream \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/session_connections.hpp \
- /usr/include/boost/asio.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/events.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/message.hpp \
+ /usr/include/c++/14.2.1/map /usr/include/c++/14.2.1/bits/stl_tree.h \
+ /usr/include/c++/14.2.1/bits/stl_map.h \
+ /usr/include/c++/14.2.1/bits/stl_multimap.h \
+ /usr/include/c++/14.2.1/queue /usr/include/c++/14.2.1/deque \
+ /usr/include/c++/14.2.1/bits/stl_deque.h \
+ /usr/include/c++/14.2.1/bits/deque.tcc \
+ /usr/include/c++/14.2.1/bits/stl_queue.h /usr/include/boost/asio.hpp \
  /usr/include/boost/asio/any_completion_executor.hpp \
  /usr/include/boost/asio/impl/any_completion_executor.ipp \
  /usr/include/boost/asio/any_completion_handler.hpp \
@@ -1043,4 +1051,47 @@ CMakeFiles/apples2apples.dir/src/network/session_connections.cpp.o: \
  /usr/include/boost/asio/writable_pipe.hpp \
  /usr/include/boost/asio/write_at.hpp \
  /usr/include/boost/asio/impl/write_at.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/message.hpp
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/game.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/game_cli.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/App.hpp \
+ /usr/include/c++/14.2.1/numeric \
+ /usr/include/c++/14.2.1/bits/stl_numeric.h \
+ /usr/include/c++/14.2.1/pstl/glue_numeric_defs.h \
+ /usr/include/c++/14.2.1/set /usr/include/c++/14.2.1/bits/stl_set.h \
+ /usr/include/c++/14.2.1/bits/stl_multiset.h \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/ConfigFwd.hpp \
+ /usr/include/c++/14.2.1/fstream \
+ /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/basic_file.h \
+ /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/c++io.h \
+ /usr/include/c++/14.2.1/bits/fstream.tcc \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Error.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Macros.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/StringTools.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/StringTools_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/FormatterFwd.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Option.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Split.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Split_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Validators.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/TypeTools.hpp \
+ /usr/include/c++/14.2.1/filesystem /usr/include/c++/14.2.1/bits/fs_fwd.h \
+ /usr/include/c++/14.2.1/bits/fs_path.h /usr/include/c++/14.2.1/codecvt \
+ /usr/include/c++/14.2.1/bits/fs_dir.h \
+ /usr/include/c++/14.2.1/bits/fs_ops.h \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Validators_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Option_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/App_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/CLI.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Version.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Config.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Config_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Formatter.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Formatter_inl.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/host.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/server.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/player.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/joingame_state.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/states.hpp

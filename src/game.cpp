@@ -17,6 +17,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -32,11 +33,24 @@ namespace Core{
 
     Game::Game() {
         cli_menu.setup_arg_parser();
+        setup_eventcallbacks();
     }
 
     void Game::setup_game(){
         std::cout << "Setting up the game, please wait for all players to connect..." << std::endl;
-       
+    }
+
+    void Game::test_logic(){
+        std::cout << "Running test_serialization logic: \n" << std::endl;
+        Core::Network::Message msg;
+        msg.type = Core::Network::MessageType::Request;
+        msg.id = 1234;
+        msg.rpc_type = Core::Network::RPCType::DealCard;
+        msg.payload = "This is a Player message test!";
+        auto byte_message = Core::Network::serialize_message(msg);
+
+        std::cout << "Testing deserialization logic: \n" << std::endl;
+        auto decoded_msg = Core::Network::deserialize_message(byte_message);
     }
 
     void Game::create_session(){
@@ -59,7 +73,6 @@ namespace Core{
             load_config_to(config_path+"redApples.txt", red_cards);
             load_config_to(config_path+"greenApples.txt", green_cards);
 
-
             /* Setting up the host session, by calling neccessary async operations for the Server */
             //host->setup_session();
             session->setup_session();
@@ -71,6 +84,9 @@ namespace Core{
             });
             
             std::cout << "This is an IO output after running io_context.run()..." << std::endl;
+            
+            start_gameloop();
+
             server_thread.join();
 
 
@@ -83,6 +99,7 @@ namespace Core{
             //auto host_address = this->cli_menu.ip_address;
             boost::asio::io_context io_context_;
             auto host_address = create_endpoint().address().to_string();
+            
             auto* player = create_session_as<Player>();
             player->add_network_component(std::make_unique<Network::Client>(io_context_, host_address, this->cli_menu.port));
 
@@ -106,6 +123,8 @@ namespace Core{
             //player->test_serialization();
             //test_state_transitions();            
             //player->test_readwrite_communication();
+
+            player->request_cards(7);
 
             start_gameloop();
 
@@ -180,10 +199,13 @@ namespace Core{
                     }else{
                         auto count_str = std::format("Current player count: {}", clients.size());
                         for (auto client : clients){
+                            auto msg_id = session->get_network_as<Network::Server>()->get_server_id();
                             auto msg = Network::create_message(
                                     Network::MessageType::Request,
+                                    msg_id,
                                     Network::RPCType::NewConnection,
                                     count_str);
+
                             auto byte_message = Network::serialize_message(msg);
                             client->write_to_client(byte_message);
                         }
@@ -200,7 +222,42 @@ namespace Core{
         });
 
         event_handler->add_callback(Gameplay::Event::CardPlayed, [this](){
+            if(this->cli_menu.host_server == true){
+                auto session = get_session_as<Host>();
+                auto server = session->get_network_as<Network::Server>();
+               
+                //TODO: - Add some hashmap or identifier for the associated client with the played card!
 
+                auto [event, message] = this->event_handler->get_eventmessage();                
+                session->add_to_round_deck(message.payload);
+
+                if (session->get_cardplayed_count() == session->get_client_count()){
+                    auto played_cards = session->get_round_deck();
+                    auto cards_payload = Network::join_strings(played_cards, ',');
+                    auto msg = Network::create_message(Network::MessageType::Request, server->get_server_id(), Network::RPCType::Vote, cards_payload); 
+                }
+            }
+            
+        });
+
+        event_handler->add_callback(Gameplay::Event::CardRequest, [this](){
+            if(this->cli_menu.host_server == true){
+                std::cout << "CardRequest Event Callback invoked by the host!" << std::endl;
+                auto host = get_session_as<Host>();
+                
+                auto [event, message] = this->event_handler->get_eventmessage();
+                auto request_id = message.id;
+                std::string card_amount = message.payload;
+                std::cout << "Received message.payload: " << card_amount << std::endl;
+                
+                int requested_card_amount = std::stoi(message.payload);
+                std::cout << "Player requested: " << requested_card_amount << "cards." << std::endl;
+                
+                auto [red_cards, green_cards] = host->get_cards();
+                std::cout << "Size of red cards deck: " << red_cards.size() << std::endl;
+                host->deal_cards(request_id, requested_card_amount); 
+                std::cout << "Size of red cards deck after dealing cards: " << red_cards.size() << std::endl;
+            }
         });
 
         event_handler->add_callback(Gameplay::Event::SynchronizeGame, [this](){
@@ -213,16 +270,18 @@ namespace Core{
         event_handler->add_callback(Gameplay::Event::CardReceived, [this](){
             if(this->cli_menu.host_server == false){
                 auto player = this->get_session_as<Player>();
-                auto received_msg = this->event_handler->get_last_message();
+                auto [event, received_msg] = this->event_handler->get_eventmessage();
+                std::cout << "CardReceived Event Callback invoked by Player!" << std::endl;
+                //Network::print_message(received_msg);
 
                 if(!received_msg.payload.empty() && received_msg.rpc_type == Network::RPCType::DealCard){
                     auto cards = Network::split_string(received_msg.payload, ',');
-                    for (std::string card: cards){
-                        player->add_card(card); 
-                    }
+                    player->add_cards(cards);
+                    player->show_cards();
                 }
                 
             }
+           
         });
 
 
@@ -231,8 +290,11 @@ namespace Core{
     }
 
     void Game::process_events(){
-        while (!this->event_handler->empty()) {
-            Gameplay::Event event = event_handler->pop_event();
+        while (!this->event_handler->eventmsg_empty()) {
+            std::cout << "Event message Queue is not empty, processing events..." << std::endl;
+            //Gameplay::Event event = event_handler->pop_event();
+            //auto [event, message] = event_handler->get_eventmessage(); // This would pop from the queue. 
+            auto event = event_handler->read_latest_event(); // Do not pop, just read front of queue.
 
             if(this->cli_menu.host_server == true){
                 auto session = get_session_as<Host>();
@@ -243,7 +305,11 @@ namespace Core{
                 auto session = get_session_as<Player>();
                 auto& context = session->get_context();
                 //session->get_context()->event_handler(event);
-                
+               
+                //NOTE: - Should I handle the events here in 'process_event()' or in each unique state?
+
+                //this->event_handler->trigger_event(event);
+
                 // Dereference the sessions unique_ptr<Network>
                 context->event_handler(event);
             }
@@ -278,6 +344,7 @@ namespace Core{
             switch (input) {
                 case '1':{
                     // Should move to a new submenu showing the available cards... 
+                    
                     break;
                 }
                 case '2':{
@@ -304,10 +371,13 @@ namespace Core{
             //std::cout << "\033[2J\033[H"; // Clear screen and move cursor to top
 
             // This method should push input events to the event queue. By polling and capturing input events
-            process_input();
-
-            // This method should handle the core logic of the current game state. Its called every frame.
-            session->run_state();
+            
+            if(this->cli_menu.host_server == false){
+                //process_input();
+                
+                // This method should handle the core logic of the current game state. Its called every frame.
+                session->run_state();
+            }
 
             process_events();
 

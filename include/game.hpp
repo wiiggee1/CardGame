@@ -65,6 +65,8 @@ namespace Core {
              */
             void create_session();
 
+            void test_logic();
+
             boost::asio::ip::tcp::endpoint create_endpoint();
 
             /**

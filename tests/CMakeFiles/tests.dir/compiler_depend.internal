@@ -32,6 +32,7 @@ tests/CMakeFiles/tests.dir/game_test.cpp.o
  /home/wiiggee1/Desktop/School/homeexam_d7032e/include/joingame_state.hpp
  /home/wiiggee1/Desktop/School/homeexam_d7032e/include/judge_state.hpp
  /home/wiiggee1/Desktop/School/homeexam_d7032e/include/network/client.hpp
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/include/network/message.hpp
  /home/wiiggee1/Desktop/School/homeexam_d7032e/include/network/network_component_interface.hpp
  /home/wiiggee1/Desktop/School/homeexam_d7032e/include/network/server.hpp
  /home/wiiggee1/Desktop/School/homeexam_d7032e/include/network/session_connections.hpp

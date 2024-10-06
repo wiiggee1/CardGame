@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "network/server.hpp"
+#include "network/session_connections.hpp"
 #include "sessiontype.hpp"
 #include <cstddef>
 #include <iostream>
@@ -21,7 +22,7 @@ namespace Core {
     */
     class Host : public SessionType{
         public:
-           
+          
             void setup_session() override;
             void run_session() override;
             void run_state() override;
@@ -47,29 +48,46 @@ namespace Core {
                         std::cout << card << std::endl;
                     }
                 }
-                
             }
 
-            void deal_cards();
+            void add_to_round_deck(const std::string card){
+                this->cardplayed_count++;                
+                this->round_deck.push_back(card);
+            }
+
+            std::vector<std::string> get_round_deck(){
+                //auto deck = this->round_deck;
+                //this->round_deck.clear();
+                return this->round_deck;
+            }
+
+            void deal_cards(unsigned short request_id, int request_amount);
             void shuffle_cards();
-            void randomize_judgeplayer();
+            void pick_judge();
             
             size_t get_client_count(){
                 return this->client_count;
             }
 
+            size_t get_cardplayed_count(){
+                return this->cardplayed_count;
+            }
+
             void loadgame_request();
             void startgame_message();
+            void next_round_transition(); //Should discard the round_deck and move to the discard deck.
 
             void lookup_judge(int judge_id);
+            void update_judge(); // move the client pointer to the left as the new judge.
 
 
         private:
-            std::map<int, Network::PlayerClient> judge_connection;
+            std::map<unsigned short, Network::PlayerClient> client_reference; // Should act as a pointer to certain players.
+            Network::PlayerClient::iterator judge_idx_iter; 
+            std::vector<std::string> round_deck;
             std::vector<std::string> red_deck;
             std::vector<std::string> green_deck;
-            std::vector<std::string> discard_red;
-            std::vector<std::string> discard_green;
+            std::vector<std::string> discard_deck;
             
         protected:
             size_t client_count = 0;

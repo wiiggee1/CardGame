@@ -18,6 +18,7 @@ int main(int argc, char **argv){
     CLI11_PARSE(apples2apples.cli_menu.app, argc, argv);
 
     /* Will initialize / allocate the network component pointer as either a 'Client' or 'Server' */
+    //apples2apples.test_logic();
     apples2apples.create_session();
     apples2apples.setup_game();
     //apples2apples.start_gameloop(); 
