@@ -2,7 +2,6 @@
 
 #include "events.hpp"
 #include "game_cli.hpp"
-#include "host.hpp"
 #include "network/client.hpp"
 #include "network/network_component_interface.hpp"
 #include "network/server.hpp"
@@ -12,15 +11,38 @@
 #include <atomic>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <queue>
 namespace Core {
-    
+  
+    //TODO: - Wrap into own header file...
+    struct GameRules{
+        int expected_players;
+        int num_bots;
+        int points_to_win; 
+        std::string game_mode;
+    };
+    GameRules new_gamerules(int num_player, int num_bots, std::string game_mode);
+
+    struct GameData{
+        bool card_played = false;
+        bool is_judge = false;
+        int points = 0;
+        int round_number = 0;
+    };
+
+    struct GameState{
+        std::map<unsigned short, GameData> player_data; // The key = client port
+    };
+
     class Game{
         
         private:
             std::unique_ptr<SessionType> session;
             static std::shared_ptr<Gameplay::EventHandler> event_handler;
+            static GameRules rules;
+            static GameState game_state;
 
         protected:
             
@@ -49,6 +71,14 @@ namespace Core {
                 return event_handler;
             }
 
+            static GameRules& getGameRules(){
+                return rules;
+            }
+
+            static GameState& getGameState(){
+                return game_state;
+            }
+            
 
             /**
              * Method for setting up the game, such as calling various setup-related methods like loading cards.
@@ -56,6 +86,7 @@ namespace Core {
              * @see setup_game()
              */
             void setup_game();
+            void apply_gamerules(GameRules game_rules);
 
             /**
              * Method for creating a game session, by adding game and network components. 
@@ -64,6 +95,9 @@ namespace Core {
              * @see create_session()
              */
             void create_session();
+
+            //TODO: - Create a bot entitiy
+            void add_bots(int num_bots);
 
             void test_logic();
 
@@ -75,12 +109,8 @@ namespace Core {
              */
             void load_config_to(const std::string config_filepath, std::vector<std::string>& target_data);
 
-            /**
-             * Sets atomic varible to true and create a std::thread that runs waiting for player logic
-             */
-            void enter_game();
-
             void setup_eventcallbacks();
+            //void setup_game_callbacks();
 
             void process_events();
 

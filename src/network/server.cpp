@@ -1,6 +1,7 @@
 #pragma once
 
 #include "events.hpp"
+#include "network/message.hpp"
 #include "network/network_component_interface.hpp"
 #include "network/session_connections.hpp"
 #include <boost/asio/io_context.hpp>
@@ -71,20 +72,9 @@ namespace Core {
                     std::cout << "New connection session from: " << remote_addr+":" << remote_port << "\n";
                         
                     auto new_connection = std::make_shared<SessionConnection>(std::move(socket), *this);
-                    int client_id = (int)remote_port;
-
-                     
+                   
                     clients.push_back(new_connection);
-
-
-                    this->trigger_event(); // This triggers the event of a new client has connected, and will call the Game class callback method. 
-                
-                    /* Callback that is triggered whenever a distinct socket receives a client request. This callback would push the new event to the queue. Which is processed in the gameloop. */
-                    
-                    new_connection->set_callback([this](Gameplay::Event event){
-                        auto event_queue = Core::Game::getEventHandler();
-                        event_queue->push_event(event);
-                    });
+                    this->connection_event(); // This triggers the event of a new client has connected, and will call the Game class callback method. 
 
                     new_connection->start_reading();
                         

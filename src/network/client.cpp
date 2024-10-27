@@ -108,9 +108,12 @@ namespace Core {
                 }
                 case Core::Network::RPCType::Vote: {
                     event_queue->store_eventmessage(Gameplay::Event::StartVote, message);     
-
                     break;
                 }
+                case Core::Network::RPCType::DontCare: {
+                    event_queue->store_eventmessage(Gameplay::Event::NetworkMessage, message);     
+                    break;
+                }                                   
             }
         }
 

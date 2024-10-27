@@ -54,6 +54,13 @@ namespace Core {
             this->eventmsg_queue.push(event_message);
         }
 
+        void EventHandler::pop_eventmessage(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            if(!eventmsg_queue.empty()){
+                eventmsg_queue.pop();
+            }
+        }
+
         std::tuple<Event, Network::Message> EventHandler::get_eventmessage(){
             std::lock_guard<std::mutex> lock(eventmsg_mutex);
             if(!eventmsg_queue.empty()){

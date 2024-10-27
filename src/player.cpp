@@ -9,9 +9,11 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <vector>
 #include "player.hpp"
+#include "game.hpp"
 
 namespace Core {
 
@@ -52,17 +54,63 @@ namespace Core {
     }
 
     void Player::setup_context(std::unique_ptr<Gameplay::GameState> state){
-        this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
+        //this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
+        if (!state_context) {
+            this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
+        } else {
+            this->state_context->set_state(std::move(state));
+        }
+    }
+
+    void Player::setup_player_callbacks(){
+
+        //NOTE: - Its important to pop the event message queue, to mark it as handle. 
+        //        Even though, you dont need to read anything. To prevent infinite loops!
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::PlayerJoined, [this](){
+            std::cout << "PlayerJoined Event Callback!" << std::endl;            
+            auto [event, update_msg] = Game::getEventHandler()->get_eventmessage();
+            playerjoined_update(update_msg);
+            // runt event trigger methods here...
+            //1. Read received event message, and print out the connected count.
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::SynchronizeGame, [this](){
+            auto [event, received_msg] = Game::getEventHandler()->get_eventmessage();
+            update_round_card(received_msg.payload); 
+            synchronize_game();
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::CardReceived, [this](){
+            std::cout << "CardReceived Event Callback invoked by Player!" << std::endl;
+            auto [event, received_msg] = Game::getEventHandler()->get_eventmessage();
+            cards_response(received_msg);
+        });
+    }
+
+    void Player::update_round_card(std::string open_card){
+        this->round_card = open_card;
     }
 
     void Player::synchronize_game(){
         //1. First we send RPCType::DealCard to obtain the individual player cards.
         //2. Secondly 
-        
-        auto msg_id = get_network_as<Network::Client>()->get_client_id();
-        auto msg = Network::create_message(Network::MessageType::Request, msg_id, Network::RPCType::DealCard, "7");
-        auto byte_message = Network::serialize_message(msg);
-        get_network_as<Network::Client>()->send_message_test(byte_message);
+        request_cards(7);
+        send_request(Network::RPCType::StartGame, "I am ready, and have received my cards!"); 
+    }
+
+    void Player::cards_response(Network::Message response_msg){
+        //Network::print_message(received_msg);
+        if(!response_msg.payload.empty() && response_msg.rpc_type == Network::RPCType::DealCard){
+            auto cards = Network::split_string(response_msg.payload, ',');
+            add_cards(cards);
+            show_cards();
+        }   
+    }
+
+    void Player::playerjoined_update(Network::Message update_msg){
+        std::string waiting_screen = std::format("Waiting to start the game!\nConnected players: {}", update_msg.payload);
+        std::cout << waiting_screen << std::endl;
     }
 
     void Player::request_cards(int num_cards){
@@ -84,12 +132,10 @@ namespace Core {
         get_network_as<Network::Client>()->send_message_test(byte_message);
     }
 
-    void Player::send_request(){
-        Network::Message msg;
-        msg.type = Network::MessageType::Request;
-        msg.rpc_type = Network::RPCType::DealCard;
-        msg.payload = "This is a Player message test!";
-        auto byte_message = Network::serialize_message(msg);
+    void Player::send_request(Network::RPCType rpc_type, std::string payload){
+        auto msg_id = get_network_as<Network::Client>()->get_client_id();
+        auto request_msg = Network::create_message(Network::MessageType::Request, msg_id, rpc_type, payload);
+        auto byte_message = Network::serialize_message(request_msg);
         get_network_as<Network::Client>()->send_message_test(byte_message);
         //this->network->send_message(const std::string &msg_payload)
     }

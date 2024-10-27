@@ -110,7 +110,6 @@ namespace Core{
                 case Core::Gameplay::StateTypes::Playing: return "Playing";
                 case Core::Gameplay::StateTypes::WaitingForPlayers: return "Waiting";
                 case Core::Gameplay::StateTypes::Error: return "Error";
-
             }
         }
 

@@ -46,6 +46,7 @@ namespace Core {
             PlayCard,
             LoadGame, //Initializing the game, server send cards to players.
             EnterWaiting, // Enter waiting (idle) state for waiting for judge to vote.
+            DontCare, // Just a DONT CARE RPC type. 
         };
 
         struct Message{
@@ -56,6 +57,10 @@ namespace Core {
         };
 
         Message create_message(MessageType msg_type, unsigned short msg_id, RPCType rpc_type, std::string payload);
+        
+        static Message DontCare(){
+            return Message{MessageType::Request, 0, RPCType::DontCare, ""};
+        }
 
         std::vector<uint8_t> serialize_message(const Message& message);
 

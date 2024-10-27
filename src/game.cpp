@@ -30,14 +30,79 @@
 namespace Core{
  
     std::shared_ptr<Gameplay::EventHandler> Game::event_handler = std::make_shared<Gameplay::EventHandler>();
+    GameRules Game::rules;
+    GameState Game::game_state;
+
+    GameRules new_gamerules(int num_player, int num_bots, std::string game_mode){
+        GameRules rules; 
+        rules.expected_players = num_player;
+        rules.num_bots = num_bots;
+        rules.game_mode = game_mode;
+        auto total_players = num_player + num_bots;
+
+        if (total_players == 4){
+            rules.points_to_win = 8;
+        }else if (total_players == 5){
+            rules.points_to_win = 7;
+        }else if (total_players == 6){
+            rules.points_to_win = 6;
+        }else if (total_players == 7){
+            rules.points_to_win = 5;
+        }else if (total_players > 7){
+            rules.points_to_win = 4;
+        }
+        return rules;
+    } 
 
     Game::Game() {
         cli_menu.setup_arg_parser();
-        setup_eventcallbacks();
+        //setup_eventcallbacks();
     }
 
     void Game::setup_game(){
-        std::cout << "Setting up the game, please wait for all players to connect..." << std::endl;
+        std::cout << "Setting up the game, and game rules. Please wait for players to connect..." << std::endl;
+        GameRules rules;  
+        auto active_subcommand = this->cli_menu.app.get_subcommand("host");
+
+        if (!(active_subcommand->get_option("--number-players")->empty())){
+            if (this->cli_menu.num_players < 4){
+                if (this->cli_menu.num_players == 1){
+                    rules = new_gamerules(this->cli_menu.num_players, 3, "default");
+                }else if (this->cli_menu.num_players == 2){
+                    rules = new_gamerules(this->cli_menu.num_players, 2, "default");
+                }else if (this->cli_menu.num_players == 3){
+                    rules = new_gamerules(this->cli_menu.num_players, 1, "default");
+                }
+                
+            }else{
+                // Number of players flag > 4, then num_bots = 0
+                rules = new_gamerules(this->cli_menu.num_players, 0, "default");
+            }
+        }else{
+            rules = new_gamerules(1, 3, "default");  
+        }
+
+        if (this->cli_menu.app.got_subcommand("host")){
+            apply_gamerules(rules);
+        }
+    }
+
+    void Game::apply_gamerules(GameRules game_rules){
+        std::string rules_string = std::format("Game Rules: \nNumber of player = {}\nNumber of bots = {}\nPoints to win = {}\nMode = {}", 
+                game_rules.expected_players, 
+                game_rules.num_bots, 
+                game_rules.points_to_win, 
+                game_rules.game_mode);
+        
+        std::cout << rules_string << std::endl;
+        this->rules = game_rules;
+
+        add_bots(game_rules.num_bots);
+    }
+
+    void Game::add_bots(int num_bots){
+        // TODO: - Fix add_bots logic, maybe define a struct containing: 
+        // a 'GameData' field, bot id, red_cards, and green_cards.
     }
 
     void Game::test_logic(){
@@ -65,9 +130,9 @@ namespace Core{
             boost::asio::io_context io_context_;
             auto* host = create_session_as<Host>();
             auto endpoint = create_endpoint();
-            
             host->add_network_component(std::make_unique<Network::Server>(io_context_, endpoint));
             
+
             auto [red_cards, green_cards] = host->get_cards();
             std::string config_path = CONFIG_FILE_PATH;
             load_config_to(config_path+"redApples.txt", red_cards);
@@ -83,12 +148,10 @@ namespace Core{
                 this->session->run_session();
             });
             
-            std::cout << "This is an IO output after running io_context.run()..." << std::endl;
-            
+            setup_eventcallbacks();
             start_gameloop();
 
             server_thread.join();
-
 
         } else if (this->cli_menu.app.got_subcommand("join")){
             std::cout << "Welcome to Apples 2 Apples - Joining game, please wait [CLIENT]..." << std::endl;
@@ -103,11 +166,12 @@ namespace Core{
             auto* player = create_session_as<Player>();
             player->add_network_component(std::make_unique<Network::Client>(io_context_, host_address, this->cli_menu.port));
 
-            //TODO: - Fix how to initialize the starting context state. 
-            
-            //player->get_context()->set_state(std::make_unique<Gameplay::JoinGameState>());
             //player->get_context() = std::make_unique<Gameplay::Context>(std::make_unique<Gameplay::JoinGameState>());
-            player->setup_context(std::make_unique<Gameplay::JoinGameState>());
+            //player->setup_context(std::make_unique<Gameplay::JoinGameState>());
+            //player->setup_context(Gameplay::JoinGameState::create_instance());
+            //player->get_context()->set_state(Gameplay::JoinGameState::create_instance());
+            
+            player->setup_context(Gameplay::JoinGameState::create_instance());
 
             //player->setup_session();
             session->setup_session();
@@ -117,15 +181,8 @@ namespace Core{
                 this->session->run_session();
             });
 
-            std::cout << "Tests for serialization, state transition, readwrite operation after running io_context.run()" << std::endl;
-
-            /* Just testing writing and reading payload messages between server and client */
-            //player->test_serialization();
-            //test_state_transitions();            
-            //player->test_readwrite_communication();
-
-            player->request_cards(7);
-
+            //player->request_cards(7);
+            setup_eventcallbacks();
             start_gameloop();
 
             client_thread.join();
@@ -180,138 +237,35 @@ namespace Core{
         config_file.close();
     }
 
-
-    void Game::enter_game(){
-        
-    }
+    //TODO: - Wrap the event callback logic to Player or Host method for more clean code:
 
     void Game::setup_eventcallbacks(){
-        //auto event_queue = Game::getEventHandler();
-        event_handler->add_callback(Gameplay::Event::PlayerJoined, [this](){
-                if(this->cli_menu.host_server == true){
-                    auto session = get_session_as<Host>();
-                    auto server = session->get_network_as<Network::Server>();
-                    auto clients = server->get_clients();
-                    auto client_count = session->get_client_count();
-
-                    if(startgame_condition(clients.size()) == true){
-                        this->event_handler->push_event(Gameplay::Event::GameReady); 
-                    }else{
-                        auto count_str = std::format("Current player count: {}", clients.size());
-                        for (auto client : clients){
-                            auto msg_id = session->get_network_as<Network::Server>()->get_server_id();
-                            auto msg = Network::create_message(
-                                    Network::MessageType::Request,
-                                    msg_id,
-                                    Network::RPCType::NewConnection,
-                                    count_str);
-
-                            auto byte_message = Network::serialize_message(msg);
-                            client->write_to_client(byte_message);
-                        }
-                    } 
-                }else if (this->cli_menu.host_server == false){
-
-                }
-        });
-        event_handler->add_callback(Gameplay::Event::GameReady, [this](){
-            if(this->cli_menu.host_server == true){
-                auto session = get_session_as<Host>();
-                session->loadgame_request(); //host sends RPCType::LoadGame to all clients
-            }
-        });
-
-        event_handler->add_callback(Gameplay::Event::CardPlayed, [this](){
-            if(this->cli_menu.host_server == true){
-                auto session = get_session_as<Host>();
-                auto server = session->get_network_as<Network::Server>();
-               
-                //TODO: - Add some hashmap or identifier for the associated client with the played card!
-
-                auto [event, message] = this->event_handler->get_eventmessage();                
-                session->add_to_round_deck(message.payload);
-
-                if (session->get_cardplayed_count() == session->get_client_count()){
-                    auto played_cards = session->get_round_deck();
-                    auto cards_payload = Network::join_strings(played_cards, ',');
-                    auto msg = Network::create_message(Network::MessageType::Request, server->get_server_id(), Network::RPCType::Vote, cards_payload); 
-                }
-            }
+        if(this->cli_menu.host_server == true){
+            auto session = get_session_as<Host>();
+            session->setup_host_callbacks();
             
-        });
-
-        event_handler->add_callback(Gameplay::Event::CardRequest, [this](){
-            if(this->cli_menu.host_server == true){
-                std::cout << "CardRequest Event Callback invoked by the host!" << std::endl;
-                auto host = get_session_as<Host>();
-                
-                auto [event, message] = this->event_handler->get_eventmessage();
-                auto request_id = message.id;
-                std::string card_amount = message.payload;
-                std::cout << "Received message.payload: " << card_amount << std::endl;
-                
-                int requested_card_amount = std::stoi(message.payload);
-                std::cout << "Player requested: " << requested_card_amount << "cards." << std::endl;
-                
-                auto [red_cards, green_cards] = host->get_cards();
-                std::cout << "Size of red cards deck: " << red_cards.size() << std::endl;
-                host->deal_cards(request_id, requested_card_amount); 
-                std::cout << "Size of red cards deck after dealing cards: " << red_cards.size() << std::endl;
-            }
-        });
-
-        event_handler->add_callback(Gameplay::Event::SynchronizeGame, [this](){
-            if(this->cli_menu.host_server == false){
-                auto player = this->get_session_as<Player>();
-                player->synchronize_game(); 
-            }
-        });
-
-        event_handler->add_callback(Gameplay::Event::CardReceived, [this](){
-            if(this->cli_menu.host_server == false){
-                auto player = this->get_session_as<Player>();
-                auto [event, received_msg] = this->event_handler->get_eventmessage();
-                std::cout << "CardReceived Event Callback invoked by Player!" << std::endl;
-                //Network::print_message(received_msg);
-
-                if(!received_msg.payload.empty() && received_msg.rpc_type == Network::RPCType::DealCard){
-                    auto cards = Network::split_string(received_msg.payload, ',');
-                    player->add_cards(cards);
-                    player->show_cards();
-                }
-                
-            }
-           
-        });
-
-
-        // Add more under... But should trigger these in process_event or should it be triggered using:
-        // context->event_handler() = state->on_event()... 
+        }else if (this->cli_menu.host_server == false){
+            auto player = this->get_session_as<Player>();
+            player->setup_player_callbacks();
+        }
     }
 
     void Game::process_events(){
         while (!this->event_handler->eventmsg_empty()) {
             std::cout << "Event message Queue is not empty, processing events..." << std::endl;
-            //Gameplay::Event event = event_handler->pop_event();
             //auto [event, message] = event_handler->get_eventmessage(); // This would pop from the queue. 
             auto event = event_handler->read_latest_event(); // Do not pop, just read front of queue.
-
             if(this->cli_menu.host_server == true){
                 auto session = get_session_as<Host>();
                 // Define event handling for the Host class
                 this->event_handler->trigger_event(event); // Requries to add_callback to map first.
 
             }else {
+                //NOTE: - Should I handle the events here in 'process_event()' or in each unique state?                
                 auto session = get_session_as<Player>();
                 auto& context = session->get_context();
-                //session->get_context()->event_handler(event);
-               
-                //NOTE: - Should I handle the events here in 'process_event()' or in each unique state?
-
-                //this->event_handler->trigger_event(event);
-
-                // Dereference the sessions unique_ptr<Network>
                 context->event_handler(event);
+                //this->event_handler->trigger_event(event);
             }
         }
     }
@@ -355,17 +309,12 @@ namespace Core{
                 }
                 default: 
                     std::cout << "Invalid option, try again!" << std::endl;
-
             }
         }
         std::cin.clear();
     }
 
     void Game::start_gameloop(){
-        //WARN: 
-        // - Should periodically checks for updates, and monitor conditions or atomic variables.
-        // - Transitions to another state when the condition is met.
-        
         while(true) {
 
             //std::cout << "\033[2J\033[H"; // Clear screen and move cursor to top
@@ -380,11 +329,6 @@ namespace Core{
             }
 
             process_events();
-
-            //Dereference of the unique pointer, to get the context and the current state. 
-            //this->event_handler.process_event(*session->get_context());
-           
-            
         }
     }
 }

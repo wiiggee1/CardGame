@@ -110,6 +110,7 @@ namespace Core {
             switch (message.rpc_type){
                 case Core::Network::RPCType::NewConnection: {
                     std::cout << "RPC NewConnection" << std::endl;
+                    //event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
                     break; 
                 }
                 case Core::Network::RPCType::StartGame: {
@@ -141,6 +142,10 @@ namespace Core {
                 }
                 case Core::Network::RPCType::Vote: {
                     event_queue->store_eventmessage(Gameplay::Event::JudgeVoted, message);
+                    break;
+                }
+                case Core::Network::RPCType::DontCare: {
+                    //event_queue->store_eventmessage(Gameplay::Event::NetworkMessage, DontCare(unsigned short msg_id));
                     break;
                 }
             }

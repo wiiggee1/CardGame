@@ -23,12 +23,11 @@ namespace Core {
             state_conditions.waiting_tostart = true;
            
             if (state_conditions.all_connected){
-                this->context->set_state(std::make_unique<PlayingState>());
+                this->context->set_state(PlayingState::create_instance());
+                //this->context->set_state(std::make_unique<PlayingState>());
             }
-
             //std::cout << "\033[2J\033[H" << std::flush; // clear the screen
             //std::system("clear"); 
-            
         }
 
         void JoinGameState::idle_state(){
@@ -44,9 +43,11 @@ namespace Core {
                 event_handler->trigger_event(event);
 
             }else if (event == Event::GameStarted) {
-                this->context->set_state(std::make_unique<PlayingState>()); 
+                this->context->set_state(PlayingState::create_instance()); 
+                //this->context->set_state(std::make_unique<PlayingState>()); 
 
             }else if (event == Event::PlayerJoined){
+                event_handler->trigger_event(event);
 
             }else if (event == Event::CardReceived) {
                 std::cout << "Inside JoinGameState and CardReceived Event was invoked!" << std::endl;

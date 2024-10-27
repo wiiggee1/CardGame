@@ -52,7 +52,7 @@ namespace Core {
                 }
 
                 /* Trigger the event callback whenever a new connection occurs. */
-                void trigger_event(){
+                void connection_event(){
                     if (callback) {
                         callback();
                     }

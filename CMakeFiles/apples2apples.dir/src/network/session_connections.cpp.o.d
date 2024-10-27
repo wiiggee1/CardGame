@@ -1087,11 +1087,10 @@ CMakeFiles/apples2apples.dir/src/network/session_connections.cpp.o: \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Config_inl.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Formatter.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Formatter_inl.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/host.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/server.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/server.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/player.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/joingame_state.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/states.hpp
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/states.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp

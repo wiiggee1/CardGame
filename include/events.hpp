@@ -26,7 +26,6 @@ namespace Core {
             StartVote,
             JudgeVoted, // Received Vote
             CardRequest,
-            // Define more under...
         };
 
         class Context;
@@ -47,7 +46,9 @@ namespace Core {
                 void trigger_event(Event event);
                 void store_message(const Network::Message& message);
                 void store_eventmessage(Event event, const Network::Message& message);
+                void pop_eventmessage();
                 std::tuple<Event, Network::Message> get_eventmessage();
+                
                 Network::Message get_last_message();
                 Event read_latest_event();
 
@@ -64,7 +65,6 @@ namespace Core {
                 mutable std::mutex eventmsg_mutex;
 
                 std::map<Event, std::function<void()>> callbacks;
-                
         };
        
     }

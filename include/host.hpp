@@ -1,5 +1,7 @@
 #pragma once 
 
+#include "game.hpp"
+#include "network/message.hpp"
 #include "network/server.hpp"
 #include "network/session_connections.hpp"
 #include "sessiontype.hpp"
@@ -11,6 +13,7 @@
 
 namespace Core {
 
+    
 
     enum class CardType{
             RED,             // Red card type 
@@ -37,18 +40,7 @@ namespace Core {
                 this->green_deck = green;
             }
 
-            void show_cards(CardType card_type){
-                if (card_type == CardType::RED){
-                    for (auto card : this->red_deck){
-                        std::cout << card << std::endl;
-                    }
-                    
-                }else if (card_type == CardType::GREEN){
-                    for (auto card : this->green_deck){
-                        std::cout << card << std::endl;
-                    }
-                }
-            }
+            void show_cards(CardType card_type);
 
             void add_to_round_deck(const std::string card){
                 this->cardplayed_count++;                
@@ -62,6 +54,7 @@ namespace Core {
             }
 
             void deal_cards(unsigned short request_id, int request_amount);
+            std::string take_card(CardType card_type);
             void shuffle_cards();
             void pick_judge();
             
@@ -73,13 +66,17 @@ namespace Core {
                 return this->cardplayed_count;
             }
 
+            void playerjoined_event();
+            void setup_host_callbacks();
+            void send_update(Network::Message msg); 
+
+            void card_played_event();
+            void card_request_event();
             void loadgame_request();
             void startgame_message();
             void next_round_transition(); //Should discard the round_deck and move to the discard deck.
-
             void lookup_judge(int judge_id);
             void update_judge(); // move the client pointer to the left as the new judge.
-
 
         private:
             std::map<unsigned short, Network::PlayerClient> client_reference; // Should act as a pointer to certain players.
@@ -91,7 +88,7 @@ namespace Core {
             
         protected:
             size_t client_count = 0;
-            size_t cardplayed_count = 0; 
+            size_t cardplayed_count = 0;
     };
     
 }

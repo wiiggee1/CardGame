@@ -18,7 +18,16 @@ namespace Core {
         */
         class JudgeState : public Gameplay::GameState{
             public:
-               
+              
+                JudgeState(const JudgeState&) = delete; // remove copy constructor.
+                JudgeState& operator=(const JudgeState&) = delete; // not assignable.
+
+                // Singleton pattern - by creating a new unique JudgeState instance
+                static std::unique_ptr<JudgeState> create_instance(){
+                    std::unique_ptr<JudgeState> state(new JudgeState());
+                    return state;
+                }
+
                 void voting_action();
 
                 /* Whenever in judge state, a green apple card is drawn from the pile */
@@ -37,7 +46,7 @@ namespace Core {
 
             private:
                 std::map<PlayerID, Card> received_cards;
-                
+                JudgeState() {}
 
             protected:
 

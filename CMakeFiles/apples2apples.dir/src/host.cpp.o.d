@@ -282,8 +282,7 @@ CMakeFiles/apples2apples.dir/src/host.cpp.o: \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Config_inl.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/Formatter.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-src/include/CLI/impl/Formatter_inl.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/host.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/server.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
  /usr/include/boost/asio/ip/tcp.hpp \
  /usr/include/boost/asio/detail/config.hpp /usr/include/boost/config.hpp \
@@ -879,6 +878,14 @@ CMakeFiles/apples2apples.dir/src/host.cpp.o: \
  /usr/include/boost/asio/detail/resolve_query_op.hpp \
  /usr/include/boost/asio/detail/resolver_service_base.hpp \
  /usr/include/boost/asio/detail/impl/resolver_service_base.ipp \
+ /usr/include/boost/asio/local/stream_protocol.hpp \
+ /usr/include/boost/asio/local/basic_endpoint.hpp \
+ /usr/include/boost/asio/local/detail/endpoint.hpp \
+ /usr/include/boost/asio/local/detail/impl/endpoint.ipp \
+ /usr/include/boost/asio/streambuf.hpp \
+ /usr/include/boost/asio/basic_streambuf.hpp \
+ /usr/include/boost/asio/basic_streambuf_fwd.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/server.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/session_connections.hpp \
  /usr/include/boost/asio.hpp \
  /usr/include/boost/asio/any_completion_executor.hpp \
@@ -930,8 +937,6 @@ CMakeFiles/apples2apples.dir/src/host.cpp.o: \
  /usr/include/boost/asio/detail/static_mutex.hpp \
  /usr/include/boost/asio/detail/posix_static_mutex.hpp \
  /usr/include/boost/asio/basic_stream_file.hpp \
- /usr/include/boost/asio/basic_streambuf.hpp \
- /usr/include/boost/asio/basic_streambuf_fwd.hpp \
  /usr/include/boost/asio/basic_writable_pipe.hpp \
  /usr/include/boost/asio/bind_allocator.hpp \
  /usr/include/boost/asio/bind_cancellation_slot.hpp \
@@ -1023,13 +1028,9 @@ CMakeFiles/apples2apples.dir/src/host.cpp.o: \
  /usr/include/boost/asio/ip/v6_only.hpp \
  /usr/include/boost/asio/is_read_buffered.hpp \
  /usr/include/boost/asio/is_write_buffered.hpp \
- /usr/include/boost/asio/local/basic_endpoint.hpp \
- /usr/include/boost/asio/local/detail/endpoint.hpp \
- /usr/include/boost/asio/local/detail/impl/endpoint.ipp \
  /usr/include/boost/asio/local/connect_pair.hpp \
  /usr/include/boost/asio/local/datagram_protocol.hpp \
  /usr/include/boost/asio/local/seq_packet_protocol.hpp \
- /usr/include/boost/asio/local/stream_protocol.hpp \
  /usr/include/boost/asio/packaged_task.hpp \
  /usr/include/boost/asio/detail/future.hpp /usr/include/c++/14.2.1/future \
  /usr/include/c++/14.2.1/condition_variable \
@@ -1074,7 +1075,6 @@ CMakeFiles/apples2apples.dir/src/host.cpp.o: \
  /usr/include/boost/asio/detail/impl/strand_executor_service.hpp \
  /usr/include/boost/asio/detail/impl/strand_executor_service.ipp \
  /usr/include/boost/asio/stream_file.hpp \
- /usr/include/boost/asio/streambuf.hpp \
  /usr/include/boost/asio/system_timer.hpp \
  /usr/include/boost/asio/use_future.hpp \
  /usr/include/boost/asio/impl/use_future.hpp \
@@ -1091,11 +1091,11 @@ CMakeFiles/apples2apples.dir/src/host.cpp.o: \
  /usr/include/boost/asio/writable_pipe.hpp \
  /usr/include/boost/asio/write_at.hpp \
  /usr/include/boost/asio/impl/write_at.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/player.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/joingame_state.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/states.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp \
  /usr/include/c++/14.2.1/random /usr/include/c++/14.2.1/bits/random.h \
  /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/opt_random.h \
- /usr/include/c++/14.2.1/bits/random.tcc
+ /usr/include/c++/14.2.1/bits/random.tcc \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/host.hpp

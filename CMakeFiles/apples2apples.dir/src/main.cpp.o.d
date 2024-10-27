@@ -1085,9 +1085,8 @@ CMakeFiles/apples2apples.dir/src/main.cpp.o: \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/game.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/host.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/server.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/session_connections.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/player.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/joingame_state.hpp
