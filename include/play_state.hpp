@@ -13,7 +13,7 @@ namespace Core {
         * @brief PlayerState class which inherits the GameState interface. 
         * This class act as a unique state during the game, and allow only specific actions.
         */
-        class PlayingState : public Gameplay::GameState{
+        class PlayingState : public Core::Gameplay::GameState{
             public:
                 PlayingState(const PlayingState&) = delete; // remove copy constructor.
                 PlayingState& operator=(const PlayingState&) = delete; // not assignable.
@@ -31,12 +31,12 @@ namespace Core {
 
                 void execute_state() override;
 
-                StateTypes active_state() const override{
-                    return StateTypes::Playing;
+                Core::Gameplay::StateTypes active_state() const override{
+                    return Core::Gameplay::StateTypes::Playing;
                 }
 
                 void idle_state() override;
-                void on_event(Context *context, Event event) override;
+                void on_event(Core::Gameplay::Context *context, Event event) override;
 
             private:
                 PlayingState() {}

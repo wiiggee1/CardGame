@@ -2,6 +2,7 @@
 
 #include "events.hpp"
 #include "network/network_component_interface.hpp"
+#include "player.hpp"
 #include "sessiontype.hpp"
 #include <algorithm>
 #include <iostream>
@@ -10,7 +11,12 @@
 #include <vector>
 #include <atomic>
 
+namespace Core {
+    class Player;
+}
+
 namespace Core{
+
     namespace Gameplay{
 
         class Context;
@@ -61,8 +67,13 @@ namespace Core{
         class Context {
             
             public:
-                Context(std::unique_ptr<GameState> initial_state){
+                
+                Context(std::unique_ptr<GameState> initial_state, Core::Player* player) : player(player) {
                     this->set_state(std::move(initial_state));
+                }
+
+                Core::Player* get_player() const {
+                    return this->player;
                 }
 
                 /**
@@ -100,6 +111,7 @@ namespace Core{
 
             private:
                 std::unique_ptr<GameState> state;
+                Core::Player* player;
                 StateCondition conditions;
         };
         

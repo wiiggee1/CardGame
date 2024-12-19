@@ -47,3 +47,9 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/src/cmake_install.cmake")
 endif()
 
+string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
+       "${CMAKE_INSTALL_MANIFEST_FILES}")
+if(CMAKE_INSTALL_LOCAL_ONLY)
+  file(WRITE "/home/wiiggee1/Desktop/School/homeexam_d7032e/_deps/cli11_proj-build/install_local_manifest.txt"
+     "${CMAKE_INSTALL_MANIFEST_CONTENT}")
+endif()

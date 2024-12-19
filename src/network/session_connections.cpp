@@ -45,7 +45,7 @@ namespace Core {
                     
                     std::cout << std::setw(1) << std::left << ANSI_BOLD << ANSI_COLOR_GREEN <<  get_endpoint_stringz() << ANSI_COLOR_RESET << "" <<  std::endl;
                     
-                    print_bytemessage(received_bytes);
+                    //print_bytemessage(received_bytes);
 
                     //WARN: Only for testing sending back response to the client sender. 
                     auto msg = deserialize_message(received_bytes);
@@ -67,7 +67,12 @@ namespace Core {
                 }
 
                 // Continue reading from the socket... Recalling itself!
-                start_reading();
+                //start_reading();
+                if (!errcode) {
+                    start_reading();
+                } else {
+                    std::cout << "[DEBUG] Not continuing read due to error: " << errcode.message() << std::endl;
+                }
                 
             };
             /* Completion token, is the final argument to an asynchronous operation's initiating function.
@@ -76,7 +81,6 @@ namespace Core {
              * Reference: https://beta.boost.org/doc/libs/1_82_0/doc/html/boost_asio/overview/model/completion_tokens.html 
              * */
             this->tcp_socket.async_read_some(buffer(this->socket_buffer, 1024), read_handler_lambda);
-            
         
         }
 
@@ -115,6 +119,7 @@ namespace Core {
                 }
                 case Core::Network::RPCType::StartGame: {
                     //event_queue->push_event(Gameplay::Event::GameStarted);
+                    std::cout << "RPC StartGame" << std::endl;
                     event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
                     break;
                 }
@@ -130,6 +135,7 @@ namespace Core {
                     break;
                 }
                 case Core::Network::RPCType::LoadGame: {
+                    event_queue->store_eventmessage(Gameplay::Event::SynchronizeGame, message);
                     break;
                 }
                 case Core::Network::RPCType::EnterWaiting: {

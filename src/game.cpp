@@ -137,6 +137,7 @@ namespace Core{
             std::string config_path = CONFIG_FILE_PATH;
             load_config_to(config_path+"redApples.txt", red_cards);
             load_config_to(config_path+"greenApples.txt", green_cards);
+            host->shuffle_cards();
 
             /* Setting up the host session, by calling neccessary async operations for the Server */
             //host->setup_session();
@@ -163,7 +164,9 @@ namespace Core{
             boost::asio::io_context io_context_;
             auto host_address = create_endpoint().address().to_string();
             
-            auto* player = create_session_as<Player>();
+            //auto* player = create_session_as<Player>();
+            auto* player = create_session_as<Player>(Gameplay::JoinGameState::create_instance());
+
             player->add_network_component(std::make_unique<Network::Client>(io_context_, host_address, this->cli_menu.port));
 
             //player->get_context() = std::make_unique<Gameplay::Context>(std::make_unique<Gameplay::JoinGameState>());
@@ -171,7 +174,7 @@ namespace Core{
             //player->setup_context(Gameplay::JoinGameState::create_instance());
             //player->get_context()->set_state(Gameplay::JoinGameState::create_instance());
             
-            player->setup_context(Gameplay::JoinGameState::create_instance());
+            //player->setup_context(Gameplay::JoinGameState::create_instance());
 
             //player->setup_session();
             session->setup_session();
@@ -259,9 +262,10 @@ namespace Core{
                 auto session = get_session_as<Host>();
                 // Define event handling for the Host class
                 this->event_handler->trigger_event(event); // Requries to add_callback to map first.
-
+                std::cout << "Event in queue: " << Gameplay::EventToString(event) << std::endl;
             }else {
                 //NOTE: - Should I handle the events here in 'process_event()' or in each unique state?                
+                std::cout << "Event in queue: " << Gameplay::EventToString(event) << std::endl;                
                 auto session = get_session_as<Player>();
                 auto& context = session->get_context();
                 context->event_handler(event);

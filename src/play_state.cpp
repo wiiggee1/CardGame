@@ -16,8 +16,7 @@ namespace Core {
         }
 
         void PlayingState::execute_state(){
-            std::cout << "Executing Playing State" << std::endl;
-
+            //std::cout << "Executing Playing State" << std::endl;
         }
 
         void PlayingState::idle_state(){

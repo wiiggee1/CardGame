@@ -71,8 +71,9 @@ namespace Core {
             void send_update(Network::Message msg); 
 
             void card_played_event();
-            void card_request_event();
+            void card_request_event(Network::Message message);
             void loadgame_request();
+            void synchronize_game();
             void startgame_message();
             void next_round_transition(); //Should discard the round_deck and move to the discard deck.
             void lookup_judge(int judge_id);

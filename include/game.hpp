@@ -17,7 +17,10 @@
 namespace Core {
   
     //TODO: - Wrap into own header file...
+    
+    /// Game Rules settings: 
     struct GameRules{
+        /// Number of non bot players
         int expected_players;
         int num_bots;
         int points_to_win; 
@@ -25,10 +28,15 @@ namespace Core {
     };
     GameRules new_gamerules(int num_player, int num_bots, std::string game_mode);
 
+    /// Game round data.
     struct GameData{
+        /// If a player/bot has played its card of the round. 
         bool card_played = false;
+        /// Flag if a certain player/bot is a judge. 
         bool is_judge = false;
+        /// total collected points (for all the rounds). 
         int points = 0;
+        /// Current round number. 
         int round_number = 0;
     };
 
@@ -60,9 +68,9 @@ namespace Core {
                 return dynamic_cast<T*>(session.get());
             }
 
-            template<typename T>
-            T* create_session_as() {
-                this->session = std::make_unique<T>();
+            template<typename T, typename... Args>
+            T* create_session_as(Args&&... args) {
+                this->session = std::make_unique<T>(std::forward<Args>(args)...);
                 return dynamic_cast<T*>(session.get());
             }
 

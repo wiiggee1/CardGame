@@ -1,0 +1,2835 @@
+#pragma once
+
+#include "network/message.hpp"
+#include <boost/asio/ip/tcp.hpp>
+#include <string>
+class NetworkComponentInterface {
+    public:
+        virtual void initialize() = 0;
+        virtual void run() = 0;
+        virtual void handle_message(const Core::Network::Message& message) = 0;
+        virtual void send_message(const std::string& msg_payload) = 0;
+
+        std::string get_endpoint_string(boost::asio::ip::tcp::socket& tcp_socket){
+            auto client_endpoint = std::format("[{}:{}]: ",
+                tcp_socket.remote_endpoint().address().to_string(), 
+                tcp_socket.remote_endpoint().port()
+            );
+            return client_endpoint;
+        }
+
+        virtual ~NetworkComponentInterface() = default;
+
+};
+#pragma once
+
+#include "events.hpp"
+#include "network/message.hpp"
+#include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <cstdint>
+#include <memory>
+namespace Core {
+    namespace Network {
+
+        using NetworkEventCallback = std::function<void(Gameplay::Event)>;
+
+
+        class Server; // IS THIS FORWARD DECLARATION CORRECT?
+
+        class SessionConnection : public std::enable_shared_from_this<SessionConnection> {
+            public:
+
+                SessionConnection(boost::asio::ip::tcp::socket socket, Server& server);
+
+                void start_reading();
+                void write_to_client(const std::vector<uint8_t>& response_msg);
+                std::string get_endpoint_stringz();
+
+                void set_callback(NetworkEventCallback event_callback){
+                    this->network_callback = event_callback;
+                }
+
+                unsigned short get_id(){
+                    return this->connection_id;
+                }
+
+                void trigger_callback(Gameplay::Event event_type){
+                    if (network_callback) {
+                        network_callback(event_type);
+                    }
+                }
+
+                void handle_request(const Message& message);
+
+            private:
+                boost::asio::ip::tcp::socket tcp_socket;
+                unsigned short connection_id; 
+                char socket_buffer[1024];
+                Server& server_ref;
+                NetworkEventCallback network_callback; //On network message callback 
+                
+        };
+    }
+}
+#pragma once
+
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
+#include <boost/asio/streambuf.hpp>
+#include <cstdint>
+#include <vector>
+namespace Core {
+    namespace Network {
+        class Client : public NetworkComponentInterface {
+            public:
+                Client(boost::asio::io_context& ctx, const std::string& host_addr, unsigned short port);
+                
+                void initialize() override;
+                void run() override;
+                void handle_message(const Core::Network::Message& message) override;
+                void send_message(const std::string& msg_payload) override;
+                void send_message_test(const std::vector<uint8_t>& msg_payload);
+
+                /* Establish communication with a destination server address (endpoint) */
+                void connect();
+
+                void start_reading();
+
+                unsigned short get_client_id(){
+                    return client_id;
+                }
+
+            protected:
+
+            private:
+                boost::asio::io_context& io_ctx;
+                boost::asio::ip::tcp::socket client_socket;
+                unsigned short client_id; 
+                char client_buffer[1024];
+                //std::vector<char> client_buffer(1024);
+               
+                  
+        };
+    }
+}
+#pragma once
+
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "network/session_connections.hpp"
+#include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <functional>
+#include <memory>
+#include <vector>
+
+namespace Core {
+    namespace Network {
+
+        using EventCallback = std::function<void()>;
+        using PlayerClient = std::vector<std::shared_ptr<SessionConnection>>;
+
+        class Server : public NetworkComponentInterface {
+            public:
+
+                Server(boost::asio::io_context& io_context, boost::asio::ip::tcp::endpoint srv_endpoint);
+
+                /**
+                * The abstract initialize() method, will call the neccessary Server network setup. 
+                **/
+                void initialize() override;
+                
+                /**
+                * The abstract run() method, will invoke or call the io_context.run() boost::asio method. 
+                **/
+                void run() override;
+               
+                void handle_message(const Core::Network::Message& message) override;
+                void send_message(const std::string& msg_payload) override;
+
+                /* Listen for incoming connections (wait for incoming clients)... */
+                void listen();
+
+                PlayerClient& get_clients(){
+                    return this->clients;
+                }
+
+                unsigned short get_server_id(){
+                    return this->server_id;
+                }
+
+                std::shared_ptr<SessionConnection> get_target_client(unsigned short connection_id); 
+
+                void set_connection_callback(EventCallback event_callback){
+                    this->callback = event_callback;
+                }
+
+                /* Trigger the event callback whenever a new connection occurs. */
+                void connection_event(){
+                    if (callback) {
+                        callback();
+                    }
+                }
+
+
+            private:
+                boost::asio::io_context& host_io_context;
+                boost::asio::ip::tcp::acceptor conn_acceptor;
+                unsigned short server_id; 
+                PlayerClient clients;
+                EventCallback callback;
+
+        };
+    }
+}
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <vector>
+
+namespace Core {
+    namespace Network {
+
+        #define ANSI_BOLD "\x1b[1m"
+        #define ANSI_COLOR_RESET "\x1b[0m"
+        #define ANSI_COLOR_GREEN "\x1b[32m"
+        #define ANSI_COLOR_RED "\x1b[31m"
+        #define ANSI_COLOR_BLUE "\x1b[34m"
+        #define ANSI_COLOR_YELLOW "\x1b[33m"
+        #define ANSI_COLOR_CYAN "\x1b[36m"
+        #define ANSI_COLOR_WHITE "\x1b[37m"
+
+        #define ANSI_UNDERLINE_GREEN "\x1b[4;32m"
+        #define ANSI_UNDERLINE_RED "\x1b[4;31m"
+        #define ANSI_UNDERLINE_BLUE "\x1b[4;34m"
+        #define ANSI_UNDERLINE_YELLOW "\x1b[4;33m"
+        #define ANSI_UNDERLINE_CYAN "\x1b[4;36m"
+
+        #define ANSI_BOLD_GREEN "\x1b[1;32m"
+        #define ANSI_BOLD_RED "\x1b[1;31m"
+        #define ANSI_BOLD_BLUE "\x1b[1;34m"
+        #define ANSI_BOLD_YELLOW "\x1b[1;33m"
+        #define ANSI_BOLD_CYAN "\x1b[1;36m"
+       
+
+
+        enum class MessageType : uint8_t {
+            Request = 1, 
+            Response = 2
+        };
+
+        enum class RPCType : uint8_t {
+            DealCard,
+            Vote,
+            NewConnection,
+            StartGame,
+            NewRound,
+            PlayCard,
+            LoadGame, //Initializing the game, server send cards to players.
+            EnterWaiting, // Enter waiting (idle) state for waiting for judge to vote.
+            DontCare, // Just a DONT CARE RPC type. 
+        };
+
+        struct Message{
+            MessageType type;
+            unsigned short id;
+            RPCType rpc_type;
+            std::string payload;
+        };
+
+        Message create_message(MessageType msg_type, unsigned short msg_id, RPCType rpc_type, std::string payload);
+        
+        static Message DontCare(){
+            return Message{MessageType::Request, 0, RPCType::DontCare, ""};
+        }
+
+        std::vector<uint8_t> serialize_message(const Message& message);
+
+        /** 
+         * This method will parse the string and return a valid Message struct object...
+         * */
+        Message deserialize_message(const std::vector<uint8_t>& data_bytes);
+
+        void print_message(const Message& message);
+        void print_subsection(const std::string &title, std::string content, const std::string &title_color, const std::string &content_color);
+
+        std::string get_string_message(const Message& message);
+        void print_bytemessage(const std::vector<uint8_t>& data_bytes);
+        std::string join_strings(const std::vector<std::string>& vec, char delimiter);
+        std::vector<std::string> split_string(const std::string& str, char delimiter);
+
+    }
+}
+
+
+
+#pragma once
+
+#include <string>
+#include "CLI/App.hpp"
+#include "CLI/CLI.hpp"
+
+namespace Core{
+
+    struct GameCLI{
+        CLI::App app;
+        bool host_server = false;
+        int num_players = 0;
+        int num_bots = 0;
+        std::string player_id;
+        std::string ip_address;
+        int port;
+        
+        void setup_arg_parser();
+        void run_parser(int argc, char** argv);
+    };
+
+}
+#pragma once
+
+#include "network/network_component_interface.hpp"
+#include <memory>
+#include <utility>
+namespace Core {
+   
+     /** 
+      * Interface class for adding/initializing what session type and priveleges, the current running game session should have. E.g., if it has Player/Client memebers or Server priveleges. 
+      */
+    class SessionType{
+
+        public:
+            virtual ~SessionType() = default;
+            virtual void setup_session() = 0;
+            virtual void run_session() = 0;
+            virtual void run_state() = 0;
+
+            template<typename T>
+            T* get_network_as() {
+                return dynamic_cast<T*>(network.get());
+            }
+
+            SessionType& add_network_component(std::unique_ptr<NetworkComponentInterface> network_component){
+                this->network = std::move(network_component);
+                return *this;
+            }
+
+        protected:
+            /* Either as a client- or server network component. */
+            std::unique_ptr<NetworkComponentInterface> network; 
+    };
+}
+#pragma once 
+
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
+#include <iostream>
+#include <memory>
+#include <typeinfo>
+
+namespace Core {
+    namespace Gameplay{
+
+        /**
+        * @brief PlayerState class which inherits the GameState interface. 
+        * This class act as a unique state during the game, and allow only specific actions.
+        */
+        class PlayingState : public Gameplay::GameState{
+            public:
+                PlayingState(const PlayingState&) = delete; // remove copy constructor.
+                PlayingState& operator=(const PlayingState&) = delete; // not assignable.
+
+                // Singleton pattern - by creating a new unique PlayingState instance
+                static std::unique_ptr<PlayingState> create_instance(){
+                    std::unique_ptr<PlayingState> state(new PlayingState());
+                    return state;
+                } 
+
+                void playcard();
+                
+                /* Whenever in player state, a red apple card is drawn from the pile if less than 7 cards */
+                void drawcard();
+
+                void execute_state() override;
+
+                StateTypes active_state() const override{
+                    return StateTypes::Playing;
+                }
+
+                void idle_state() override;
+                void on_event(Context *context, Event event) override;
+
+            private:
+                PlayingState() {}
+                
+
+            protected:
+                
+        };
+    
+    }
+}
+#pragma once 
+
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
+#include <iostream>
+#include <typeinfo>
+
+namespace Core {
+    namespace Gameplay{
+       
+        class JoinGameState : public GameState{
+             public:
+
+                JoinGameState(const JoinGameState&) = delete; // remove copy constructor.
+                JoinGameState& operator=(const JoinGameState&) = delete; // not assignable.
+
+                // Singleton pattern - by creating a new unique JoinGameState instance
+                static std::unique_ptr<JoinGameState> create_instance(){
+                    std::unique_ptr<JoinGameState> state(new JoinGameState());
+                    return state;
+                }
+
+                 // Here you might poll or receive continuous updates from the server.
+                // Check if any status update is needed or if any other condition has been met
+                void execute_state() override;
+
+                StateTypes active_state() const override{
+                    return StateTypes::WaitingForPlayers;
+                }
+
+                void idle_state() override;
+                void on_event(Context *context, Event event) override;
+                bool enough_players();
+
+            private:
+                JoinGameState(){}
+                
+
+            protected:
+        };
+    }
+}
+#pragma once
+
+#include "events.hpp"
+#include "game_cli.hpp"
+#include "network/client.hpp"
+#include "network/network_component_interface.hpp"
+#include "network/server.hpp"
+#include "player.hpp"
+#include "sessiontype.hpp"
+#include "states.hpp"
+#include <atomic>
+#include <boost/asio/ip/tcp.hpp>
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <queue>
+namespace Core {
+  
+    //TODO: - Wrap into own header file...
+    
+    /// Game Rules settings: 
+    struct GameRules{
+        /// Number of non bot players
+        int expected_players;
+        int num_bots;
+        int points_to_win; 
+        std::string game_mode;
+    };
+    GameRules new_gamerules(int num_player, int num_bots, std::string game_mode);
+
+    /// Game round data.
+    struct GameData{
+        /// If a player/bot has played its card of the round. 
+        bool card_played = false;
+        /// Flag if a certain player/bot is a judge. 
+        bool is_judge = false;
+        /// total collected points (for all the rounds). 
+        int points = 0;
+        /// Current round number. 
+        int round_number = 0;
+    };
+
+    struct GameState{
+        std::map<unsigned short, GameData> player_data; // The key = client port
+    };
+
+    class Game{
+        
+        private:
+            std::unique_ptr<SessionType> session;
+            static std::shared_ptr<Gameplay::EventHandler> event_handler;
+            static GameRules rules;
+            static GameState game_state;
+
+        protected:
+            
+        public:
+            Game();
+            GameCLI cli_menu;
+
+             /**
+             * Method for getting the pointer of a specific SessionType derived class (Player, Host).
+             * @brief Dynamic type casting for accessing derived class methods.
+             * @see get_session_as()
+             */
+            template<typename T>
+            T* get_session_as() {
+                return dynamic_cast<T*>(session.get());
+            }
+
+            template<typename T>
+            T* create_session_as() {
+                this->session = std::make_unique<T>();
+                return dynamic_cast<T*>(session.get());
+            }
+
+            /* Static method to access shared EventHandler resource during the liftime of program running. */
+            static std::shared_ptr<Gameplay::EventHandler> getEventHandler(){
+                return event_handler;
+            }
+
+            static GameRules& getGameRules(){
+                return rules;
+            }
+
+            static GameState& getGameState(){
+                return game_state;
+            }
+            
+
+            /**
+             * Method for setting up the game, such as calling various setup-related methods like loading cards.
+             * @brief Setup method.
+             * @see setup_game()
+             */
+            void setup_game();
+            void apply_gamerules(GameRules game_rules);
+
+            /**
+             * Method for creating a game session, by adding game and network components. 
+             * As either a hosting server or as a client (player).
+             * @brief Game session creation method.
+             * @see create_session()
+             */
+            void create_session();
+
+            //TODO: - Create a bot entitiy
+            void add_bots(int num_bots);
+
+            void test_logic();
+
+            boost::asio::ip::tcp::endpoint create_endpoint();
+
+            /**
+             * Method that act as a pass by reference for loading the game config data to a specific target_data. 
+             * Where 'target_data' is our game cards. 
+             */
+            void load_config_to(const std::string config_filepath, std::vector<std::string>& target_data);
+
+            void setup_eventcallbacks();
+            //void setup_game_callbacks();
+
+            void process_events();
+
+            void render_game(const std::string &update_string, const std::string &update_value);
+
+            void process_input();
+
+            void start_gameloop();
+
+            bool startgame_condition(size_t num_client) {
+                return num_client >= 4;
+            }
+
+    };
+    
+}
+#pragma once 
+
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "sessiontype.hpp"
+#include <algorithm>
+#include <iostream>
+#include <memory>
+#include <typeinfo>
+#include <vector>
+#include <atomic>
+
+namespace Core{
+    namespace Gameplay{
+
+        class Context;
+
+        enum class States{
+            PLAYCARD,           // Play red apple from hand (based on green apple)
+            ALL_READY,          // All players have played its red apple card (this round)
+            PLAYER_WON,         // Check each round if player / client have x green apples 
+            REWARD_PLAYER,      // Increment the client player which the judge selected
+            IDLE,               // After performing action the players enter a waiting state
+        };
+
+        enum class StateTypes {
+            WaitingForPlayers,  // This is the joing game wait state, for waiting for all clients to connect.
+            Playing,            // This is playing state if you're not in 'judge state'.
+            Judge,              // Other playing state but whenever you are the judge.
+            Idle,               // Idle state for clients to wait for the new round, this will print status.
+            Error,
+        };
+
+        struct StateCondition {
+            std::atomic<bool> waiting_tostart{false};
+            std::atomic<bool> all_connected{false};
+            std::atomic<bool> all_played{false};
+            std::atomic<bool> judge_has_selected{false};
+            std::atomic<bool> is_judge{false};
+        };
+
+        class GameState{
+            public:
+                virtual ~GameState() = default;
+              
+                /* Handle any ongoing state logic, such as waiting for player's action, etc...*/
+                virtual void execute_state() = 0;
+                virtual StateTypes active_state() const = 0;
+                virtual void on_event(Context* context, Event event) = 0;
+                virtual void idle_state() = 0; // idle state should check for conditions iteratively
+                
+                void set_context(Context *context){
+                    this->context = context;
+                }
+            
+            protected:
+                Context *context;
+
+        };
+
+        class Context {
+            
+            public:
+                Context(std::unique_ptr<GameState> initial_state){
+                    this->set_state(std::move(initial_state));
+                }
+
+                /**
+                 * The 'set_state' method is for transition between different states, during runtime. 
+                 */
+                void set_state(std::unique_ptr<GameState> new_state){
+                    this->state = std::move(new_state);
+                    this->state->set_context(this);
+                }
+
+                StateTypes active_state() const {
+                    return this->state->active_state(); 
+                }
+
+                void execute_state() {
+                    this->state->execute_state();
+                }
+
+                void idle_state() {
+                    this->state->idle_state();
+                }
+
+                void event_handler(Event event) {
+                    this->state->on_event(this, event);
+                }
+
+                StateCondition& get_conditions() {
+                    return this->conditions;
+                }
+
+                std::string get_current_state(){
+                    const std::type_info& type = typeid(this->state);
+                    return type.name();
+                }
+
+            private:
+                std::unique_ptr<GameState> state;
+                StateCondition conditions;
+        };
+        
+        constexpr const char* StateTypeToString(StateTypes state_type){
+            switch (state_type) {
+                case Core::Gameplay::StateTypes::Idle: return "Idle";
+                case Core::Gameplay::StateTypes::Judge: return "Judge";
+                case Core::Gameplay::StateTypes::Playing: return "Playing";
+                case Core::Gameplay::StateTypes::WaitingForPlayers: return "Waiting";
+                case Core::Gameplay::StateTypes::Error: return "Error";
+            }
+        }
+
+        constexpr StateTypes StringToStateType(std::string state_string){
+            if (state_string == "Idle"){
+                return StateTypes::Idle;
+            } else if (state_string == "Judge"){
+                return StateTypes::Judge;
+            }else if (state_string == "Playing"){
+                return StateTypes::Playing;
+            }else if (state_string == "Waiting") {
+                return StateTypes::WaitingForPlayers;
+            }else {
+                return StateTypes::Error; 
+            }
+            
+        }
+
+    }
+
+}
+#pragma once 
+
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
+#include <iostream>
+#include <map>
+#include <typeinfo>
+
+namespace Core {
+    namespace Gameplay{
+
+        using PlayerID = int;
+        using Card = std::string;
+
+        /**
+        * @brief JudgeState class which inherits the GameState interface. 
+        * This class act as a unique state during the game, and allow only judge specific actions.
+        */
+        class JudgeState : public Gameplay::GameState{
+            public:
+              
+                JudgeState(const JudgeState&) = delete; // remove copy constructor.
+                JudgeState& operator=(const JudgeState&) = delete; // not assignable.
+
+                // Singleton pattern - by creating a new unique JudgeState instance
+                static std::unique_ptr<JudgeState> create_instance(){
+                    std::unique_ptr<JudgeState> state(new JudgeState());
+                    return state;
+                }
+
+                void voting_action();
+
+                /* Whenever in judge state, a green apple card is drawn from the pile */
+                void drawcard();
+
+                void execute_state() override;
+
+                StateTypes active_state() const override{
+                    return StateTypes::Judge;
+                }
+
+                /* Await the players for that round to play their red cards. */
+                void idle_state() override;
+                
+                void on_event(Context *context, Event event) override; 
+
+            private:
+                std::map<PlayerID, Card> received_cards{};
+                JudgeState() {}
+
+            protected:
+
+        };
+    
+    }
+}
+
+#pragma once 
+
+#include "network/message.hpp"
+#include <functional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <tuple>
+#include <typeinfo>
+
+namespace Core {
+    namespace Gameplay{
+
+        enum class Event {
+            UserInput,
+            NetworkMessage,
+            PlayerJoined,
+            GameStarted,
+            NextRound,
+            GameReady,
+            SynchronizeGame,
+            CardPlayed,
+            CardReceived,
+            StartVote,
+            JudgeVoted, // Received Vote
+            CardRequest,
+        };
+
+        constexpr const char* EventToString(Event event_type){
+            switch (event_type) {
+                case Core::Gameplay::Event::UserInput: return "UserInput";
+                case Core::Gameplay::Event::NetworkMessage: return "NetworkMessage";
+                case Core::Gameplay::Event::PlayerJoined: return "PlayerJoined";
+                case Core::Gameplay::Event::GameStarted: return "GameStarted";
+                case Core::Gameplay::Event::NextRound: return "NextRound";
+                case Core::Gameplay::Event::GameReady: return "GameReady";
+                case Core::Gameplay::Event::SynchronizeGame: return "SynchronizeGame";
+                case Core::Gameplay::Event::CardPlayed: return "CardPlayed";
+                case Core::Gameplay::Event::CardReceived: return "CardReceived";
+                case Core::Gameplay::Event::StartVote: return "StartVote";
+                case Core::Gameplay::Event::JudgeVoted: return "JudgeVoted";
+                case Core::Gameplay::Event::CardRequest: return "CardRequest";
+            }
+        };
+
+        class Context;
+
+        class EventHandler {
+            public: 
+                void push_event(Event event);
+                Event pop_event();
+                bool empty();
+
+                std::queue<Event> queue(){
+                    return this->event_queue;
+                }
+
+                bool eventmsg_empty();
+
+                void add_callback(Event event, std::function<void()> callback);
+                void trigger_event(Event event);
+                void store_message(const Network::Message& message);
+                void store_eventmessage(Event event, const Network::Message& message);
+                void pop_eventmessage();
+                std::tuple<Event, Network::Message> get_eventmessage();
+                
+                Network::Message get_last_message();
+                Event read_latest_event();
+
+            private:
+                std::queue<Event> event_queue;
+                mutable std::mutex queue_mutex;
+
+                //WARN: Remove below if eventmsg_queue would not work. 
+                std::queue<Network::Message> message_queue;
+                mutable std::mutex message_mutex;
+
+                //TODO: - Add a std::queue, with tuple for storing associated message with that event.
+                std::queue<std::tuple<Event, Network::Message>> eventmsg_queue;
+                mutable std::mutex eventmsg_mutex;
+
+                std::map<Event, std::function<void()>> callbacks;
+        };
+       
+    }
+}
+#pragma once 
+
+#include "game.hpp"
+#include "network/message.hpp"
+#include "network/server.hpp"
+#include "network/session_connections.hpp"
+#include "sessiontype.hpp"
+#include <cstddef>
+#include <iostream>
+#include <map>
+#include <tuple>
+#include <vector>
+
+namespace Core {
+
+    
+
+    enum class CardType{
+            RED,             // Red card type 
+            GREEN,          // Green card type
+    };
+
+    /**
+    * @brief Host class, act as a placeholder for different attributes related to a server-side logic.  
+    */
+    class Host : public SessionType{
+        public:
+          
+            void setup_session() override;
+            void run_session() override;
+            void run_state() override;
+
+            std::tuple<std::vector<std::string>&, std::vector<std::string>&> get_cards(){
+                // std::tie works the same as std::make_tuple but for lvalue references to its arguments. 
+                return std::tie(this->red_deck, this->green_deck);
+            }
+
+            void add_cards(std::vector<std::string> red, std::vector<std::string> green){
+                this->red_deck = red;
+                this->green_deck = green;
+            }
+
+            void show_cards(CardType card_type);
+
+            void add_to_round_deck(const std::string card){
+                this->cardplayed_count++;                
+                this->round_deck.push_back(card);
+            }
+
+            std::vector<std::string> get_round_deck(){
+                //auto deck = this->round_deck;
+                //this->round_deck.clear();
+                return this->round_deck;
+            }
+
+            void deal_cards(unsigned short request_id, int request_amount);
+            std::string take_card(CardType card_type);
+            void shuffle_cards();
+            void pick_judge();
+            
+            size_t get_client_count(){
+                return this->client_count;
+            }
+
+            size_t get_cardplayed_count(){
+                return this->cardplayed_count;
+            }
+
+            void playerjoined_event();
+            void setup_host_callbacks();
+            void send_update(Network::Message msg); 
+
+            void card_played_event();
+            void card_request_event(Network::Message message);
+            void loadgame_request();
+            void synchronize_game();
+            void startgame_message();
+            void next_round_transition(); //Should discard the round_deck and move to the discard deck.
+            void lookup_judge(int judge_id);
+            void update_judge(); // move the client pointer to the left as the new judge.
+
+        private:
+            std::map<unsigned short, Network::PlayerClient> client_reference; // Should act as a pointer to certain players.
+            Network::PlayerClient::iterator judge_idx_iter; 
+            std::vector<std::string> round_deck;
+            std::vector<std::string> red_deck;
+            std::vector<std::string> green_deck;
+            std::vector<std::string> discard_deck;
+            
+        protected:
+            size_t client_count = 0;
+            size_t cardplayed_count = 0;
+    };
+    
+}
+#pragma once 
+
+#include "joingame_state.hpp"
+#include "network/message.hpp"
+#include "sessiontype.hpp"
+#include "states.hpp"
+#include <condition_variable>
+#include <iostream>
+#include <memory>
+#include <vector>
+#include "game.hpp"
+
+namespace Core {
+
+    /**
+    * @brief Player class, act as a placeholder for different attributes related to a client player.  
+    */
+    class Player : public SessionType{
+        public:
+            
+            std::vector<std::string>& get_cards(){
+                return this->red_cards;
+            }
+
+            void add_card(std::string card){
+                this->red_cards.push_back(card);
+            }
+
+            void add_cards(std::vector<std::string> cards){
+                std::cout << "Player number of cards before adding: " << this->red_cards.size() << std::endl;
+                std::cout << "Cards arg size before: " << cards.size() << std::endl;
+                
+                for (auto card: cards){
+                    //std::cout << "Adding card:\n" << card << std::endl;
+                    this->red_cards.push_back(card);
+                }
+                std::cout << "Number of cards after adding: " << this->red_cards.size() << std::endl;
+            }
+
+            std::unique_ptr<Gameplay::Context>& get_context(){
+                return state_context;
+            }
+
+            int get_points(){
+                return this->green_cards.size();
+            }
+
+            std::string get_round_card(){
+                return this->round_card;
+            }
+
+            void update_round_card(std::string round_card);
+
+            std::string show_cards();
+
+            void setup_session() override;
+            void run_session() override;
+            void run_state() override;
+           
+            void setup_player_callbacks();
+            void setup_context(std::unique_ptr<Gameplay::GameState> state);
+            void switch_state(std::unique_ptr<Gameplay::GameState> new_state);
+            void send_rpc(Network::MessageType msg_type, Network::RPCType rpc_type, std::string payload);
+
+            bool is_in_state(Gameplay::StateTypes state_type) const;
+            void synchronize_game(); // This is a request for loading and synchronizing the game state.
+            void cards_response(Network::Message response_msg); // Handle the response of the requested cards.
+            void request_cards(int num_cards);
+            void playerjoined_update(Network::Message update_msg);
+
+        private:
+            int player_id;
+            bool judge = false;
+            //TODO: Add data buffers for reading and output stream between the hosting server. 
+            std::vector<std::string> red_cards; // This should be the unique player's hand of cards
+            std::vector<std::string> green_cards; // Green cards act as the points of the player. 
+            std::string round_card; // This is the green card shown to everyone, each round. 
+
+        protected:
+            /**
+             * Unique pointer context, for managing game states (Player or Judge states).
+             * Recall that a unique pointer maintains exclusive ownership and can only be moved.
+             */
+            std::unique_ptr<Gameplay::Context> state_context = nullptr;
+            
+
+
+    };
+    
+}
+#pragma once
+
+#include "events.hpp"
+#include "network/message.hpp"
+#include "network/network_component_interface.hpp"
+#include "network/session_connections.hpp"
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include "network/server.hpp"
+#include "game.hpp"
+
+namespace Core {
+    namespace Network {
+
+        using boost::asio::ip::tcp;
+        using boost::asio::io_context;
+        //Server(boost::asio::io_context& io_context, boost::asio::ip::tcp::endpoint srv_endpoint);
+
+        Server::Server(io_context& iocontext, tcp::endpoint srv_endpoint)
+            : host_io_context(iocontext), conn_acceptor(iocontext, srv_endpoint)
+        {
+            uint16_t port = 2048;
+            auto endpoint = tcp::endpoint(tcp::v4(), port);
+            tcp::endpoint local_endpoint = conn_acceptor.local_endpoint();
+            this->server_id = (unsigned short)local_endpoint.port();
+            
+            std::cout <<"Server initialized, and listening on: "<< local_endpoint.address().to_string()+":"<<local_endpoint.port()<< std::endl;
+        }
+        
+        void Server::initialize(){
+            // Runs the neccessary asynchronous server operations
+            // WARN: Should be called before Server::run() and io_context.run()!
+            std::cout << "initialize (server class) - starting the async listen() loop now!" << std::endl; 
+            listen();
+        }
+
+        void Server::run(){
+            //More info at: https://live.boost.org/doc/libs/1_85_0/doc/html/boost_asio/reference/io_context.html
+            try {
+                this->host_io_context.run();
+                //this->host_io_context.poll();
+                //this->host_io_context.post();
+            } catch (boost::system::error_code& errcode) {
+                std::cerr << "IO Context 'run() method got error: " << errcode << std::endl;
+            }
+        }
+        
+        void Server::handle_message(const Core::Network::Message& message){
+
+        }
+
+
+        void Server::send_message(const std::string& msg_payload){
+            std::cout << "This shouldnt be manually controlled, but will send message, to all of the clients" << std::endl;
+            for (auto client: this->clients){
+                //client->write_to_client(msg_payload);
+            }
+        }
+
+        void Server::listen(){
+
+            /* Lambda function handler - callable object for handling new server connections */
+            auto conn_handle_lambda = [this](boost::system::error_code errcode, tcp::socket socket){
+                if (!errcode){
+                    auto connection_endpoint = socket.remote_endpoint();
+                    auto remote_addr = connection_endpoint.address().to_string();
+                    auto remote_port = connection_endpoint.port();
+                    std::cout << "New connection session from: " << remote_addr+":" << remote_port << "\n";
+                        
+                    auto new_connection = std::make_shared<SessionConnection>(std::move(socket), *this);
+                   
+                    clients.push_back(new_connection);
+                    this->connection_event(); // This triggers the event of a new client has connected, and will call the Game class callback method. 
+
+                    new_connection->start_reading();
+                        
+                }
+                listen();
+            };
+
+            /* boost asio 'async_accept' takes a lambda handler as argument. 
+             * It will automatically pass the necessary arguments to the handler.*/
+            conn_acceptor.async_accept(conn_handle_lambda);
+
+            /* Same as above but with std::bind instead of lambda expression:
+                acceptor_.async_accept(new_connection->socket(),
+                    std::bind(&tcp_server::handle_accept, this, new_connection, std::placeholders::_1));
+            */
+                
+        }
+
+        std::shared_ptr<SessionConnection> Server::get_target_client(unsigned short connection_id){
+            for (auto target_client: this->clients){
+                if (target_client->get_id() == connection_id){
+                    std::cout << "Found target client ID: " << target_client->get_id() << std::endl;
+                    return target_client;
+                }
+            }
+            std::cout << "Didn't find target client ID, returning 'nullptr'!" << std::endl;
+            return nullptr;
+        }
+           
+    }
+}
+#pragma once
+
+#include <cstdint>
+#include <cstring>
+#include <format>
+#include <iomanip>
+#include <iterator>
+#include <sstream>
+#include <iostream>
+#include <cstddef>
+#include <string>
+#include "network/message.hpp"
+#include <boost/asio/buffer.hpp>
+#include <vector>
+
+
+namespace Core {
+    namespace Network {
+
+        using namespace boost::asio::buffer_literals;
+
+        Message create_message(MessageType msg_type, unsigned short msg_id, RPCType rpc_type, std::string payload){
+            Message msg;
+            msg.type = msg_type;
+            msg.id = msg_id;
+            msg.rpc_type = rpc_type;
+            msg.payload = payload;
+            return msg;
+        }
+
+        std::vector<uint8_t> serialize_message(const Message& message){
+            
+            auto header_bytesize = sizeof(message.type) + sizeof(message.id) + sizeof(message.rpc_type);
+            auto payload_size = message.payload.size();
+            std::vector<uint8_t> sending_buffer(header_bytesize + sizeof(uint32_t) + payload_size);
+            
+            /**
+             * void* memcpy( void* dest, const void* src, std::size_t count );
+             * Copies count bytes from the object pointed to by src to the object pointed to by dest. 
+             * Both objects are reinterpreted as arrays of unsigned char
+             */
+            std::memcpy(sending_buffer.data(), &message.type, sizeof(message.type));
+            std::memcpy(sending_buffer.data() + sizeof(message.type), &message.id, sizeof(message.id));
+            std::memcpy(sending_buffer.data() + sizeof(message.type) + sizeof(message.id), &message.rpc_type, sizeof(message.rpc_type));
+            
+            std::memcpy(sending_buffer.data() + header_bytesize, &payload_size, sizeof(uint32_t));
+            std::memcpy(sending_buffer.data() + header_bytesize + sizeof(uint32_t), message.payload.data(), payload_size);
+
+            //std::string payload_data(sending_buffer.data()+header_bytesize, message.payload.size()); 
+
+            const unsigned char* msgtype_data = static_cast<const unsigned char*>(sending_buffer.data());
+            const unsigned char* rpctype_data = static_cast<const unsigned char*>(sending_buffer.data()+sizeof(message.type));
+            
+            //print_message(message);
+            //print_bytemessage(sending_buffer);
+
+            /*
+            std::cout << "\nThe serialized message as byte array: " << std::endl;
+            std::cout << "[";            
+            for (uint8_t byte : sending_buffer) {
+                //std::cout << static_cast<char>(byte);
+                std::cout << static_cast<int>(byte) << " ";
+            }
+            std::cout << "]" << std::endl;       
+            */
+
+            return sending_buffer;
+        }
+
+        //TODO: - Fix logic with the added struct 'id' field
+        Message deserialize_message(const std::vector<uint8_t>& data_bytes){
+            Message msg;
+            size_t header_bytesize = sizeof(msg.type) + sizeof(msg.id) + sizeof(msg.rpc_type);
+            uint32_t payload_size;
+
+            //const unsigned char* byte_as_char = static_cast<const unsigned char*>(data_bytes.data());
+            std::string byte_as_str(data_bytes.begin(), data_bytes.end());
+            std::vector<uint8_t> header_slice(data_bytes.begin(), data_bytes.begin() + header_bytesize);
+
+            /*std::memcpy -> (dest, src, N)... Copies N bytes from src to dest. */
+            // E.g., dest=ptr(msg.type), src=ptr(data_bytes vector), N=size of msg.type as number of bytes
+            std::memcpy(&msg.type, data_bytes.data(), sizeof(msg.type)); 
+            std::memcpy(&msg.id, data_bytes.data() + sizeof(msg.type), sizeof(msg.id));
+            std::memcpy(&msg.rpc_type, data_bytes.data() + sizeof(msg.type) + sizeof(msg.id), sizeof(msg.rpc_type));
+            std::memcpy(&payload_size, data_bytes.data() + header_bytesize, sizeof(uint32_t));
+
+            std::string payload_slice(data_bytes.begin() + header_bytesize + sizeof(uint32_t), data_bytes.end());
+            std::string payload_slicez(data_bytes.begin() + header_bytesize + sizeof(uint32_t), data_bytes.begin() + header_bytesize + sizeof(uint32_t) + payload_size);
+
+            msg.payload = payload_slice;
+            //std::cout << "Received Message struct after deserialization: " << std::endl;  
+            print_message(msg);
+
+            return msg;
+        }
+
+        std::string join_strings(const std::vector<std::string>& vec, char delimiter = '/'){
+            std::ostringstream oss;
+            std::copy(vec.begin(), vec.end(), std::ostream_iterator<std::string>(oss, &delimiter));
+            std::string joined_string = oss.str();
+            //std::cout << "Joined string:\n" << joined_string << std::endl;
+            if (!joined_string.empty()){
+                joined_string.pop_back();
+            }
+            return joined_string;
+        }
+
+        std::vector<std::string> split_string(const std::string& str, char delimiter = '/'){
+            std::vector<std::string> string_vec;
+            std::istringstream iss(str);
+            std::string token;
+
+            while (std::getline(iss, token, delimiter)){
+                string_vec.push_back(token);
+            }
+
+            return string_vec;
+        }
+
+
+        void print_message(const Message &msg){
+            //std::cout << "MessageType: " << static_cast<int>(msg.type) << std::endl;
+            //std::cout << "RPCType: " << static_cast<int>(msg.rpc_type) << std::endl;
+            //std::cout << "Payload: " << msg.payload << std::endl;
+            const std::string title_colorcode = ANSI_BOLD_CYAN;
+            const std::string content_colorcode = ANSI_COLOR_WHITE;
+            
+            print_subsection("MsgType", 
+                    std::to_string(static_cast<int>(msg.type)), 
+                    title_colorcode,
+                    content_colorcode);
+
+            print_subsection("MsgID", 
+                    std::to_string(static_cast<unsigned short>(msg.id)), 
+                    title_colorcode,
+                    content_colorcode);
+            
+            print_subsection("RPCType", 
+                    std::to_string(static_cast<int>(msg.rpc_type)),
+                    title_colorcode,
+                    content_colorcode);
+            
+            print_subsection("Payload", 
+                    msg.payload,
+                    title_colorcode,
+                    content_colorcode);
+
+            //std::string hex_value = std::format("{:02X}", static_cast<unsigned char>(char_byte));
+            //std::cout << "Char: " << char_byte << ", Hex (byte value): 0x" << hex_value << std::endl;
+        }
+
+        void print_subsection(const std::string &title, std::string content, const std::string &title_color = ANSI_BOLD, const std::string &content_color = ANSI_COLOR_RED){
+
+            std::istringstream iss(content);
+            std::string line;
+            std::cout << std::setw(10) << std::left << title_color << title << ": " << ANSI_COLOR_RESET;
+
+            while (std::getline(iss, line)) {
+                //std::cout << std::setw(15) << ANSI_COLOR_RED << line << ANSI_COLOR_RESET << std::endl;
+                if (!content.empty()){
+                    std::cout << std::setw(15) << content_color << line << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+        }
+
+        std::string get_string_message(const Message &message){
+            std::string msg_str = std::format("MessageType: {}\nId: {}\nRPCType: {}\nPayload: {}",
+                    static_cast<int>(message.type), 
+                    static_cast<unsigned short>(message.id),
+                    static_cast<int>(message.rpc_type), 
+                    message.payload);
+            return msg_str;
+        }
+
+        void print_bytemessage(const std::vector<uint8_t> &data_bytes){
+            std::ostringstream oss;
+            const int bytes_per_line = 16; 
+
+            oss << "[";
+            for (size_t i = 0; i < data_bytes.size(); ++i) {
+                oss << static_cast<int>(data_bytes[i]) << " ";
+                if ((i + 1) % bytes_per_line == 0) {
+                    int title_content_width = 10+15+6;
+                    oss << "...\n" << std::setw(title_content_width) << "... ";
+                }
+            }
+            oss << "]" << std::endl;
+            
+            std::string byte_message = oss.str();
+            
+            const std::string title_colorcode = ANSI_BOLD_YELLOW;
+            const std::string content_colorcode = ANSI_COLOR_WHITE;
+            
+            print_subsection("Byte array of size", 
+                    std::to_string(data_bytes.size()),
+                    title_colorcode,
+                    content_colorcode);            
+            
+            print_subsection("Received Byte array", 
+                    byte_message,
+                    title_colorcode,
+                    content_colorcode);
+        }
+    }
+}
+#pragma once
+
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/date_time/time_clock.hpp>
+#include <boost/system/detail/error_code.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <ctime>
+#include <format>
+#include <iostream>
+#include <string>
+#include "network/session_connections.hpp"
+#include "events.hpp"
+#include "game.hpp"
+#include "network/message.hpp"
+
+namespace Core {
+    namespace Network {
+
+        using boost::asio::ip::tcp;
+        using boost::asio::buffer;
+
+        SessionConnection::SessionConnection(tcp::socket socket, Server& server)
+            : tcp_socket(std::move(socket)), server_ref(server){
+                this->connection_id = (unsigned short)this->tcp_socket.remote_endpoint().port();
+                std::cout << "New SessionConnection was created with ID: " << connection_id << std::endl;
+        }
+
+        void SessionConnection::start_reading(){
+            
+            auto self = shared_from_this();  // Keep the connection alive during the async operation
+            
+            auto read_handler_lambda = [this, self](const boost::system::error_code errcode, size_t byte_size){
+                if (!errcode && byte_size > 0){
+                    std::time_t now = std::time(0);
+                    //std::string received_data(socket_buffer, byte_size);
+                    std::string received_data(socket_buffer, this->socket_buffer+byte_size);
+                    std::vector<uint8_t> received_bytes(this->socket_buffer, this->socket_buffer+byte_size);
+
+                    
+                    std::cout << std::setw(1) << std::left << ANSI_BOLD << ANSI_COLOR_GREEN <<  get_endpoint_stringz() << ANSI_COLOR_RESET << "" <<  std::endl;
+                    
+                    //print_bytemessage(received_bytes);
+
+                    //WARN: Only for testing sending back response to the client sender. 
+                    auto msg = deserialize_message(received_bytes);
+                    
+
+                    // USE THIS as unique ID for pushing to the EventHandler queue. 
+                    
+                    handle_request(msg); 
+                    //trigger_callback(Gameplay::Event::);
+                    
+                    //auto response_msg = serialize_message(msg);
+                    //write_to_client(response_msg);
+                    
+                
+                }else if (errcode == boost::asio::error::eof){
+                    std::cout << "Client socket " << get_endpoint_stringz() << ", disconnected!" << std::endl;
+                }else {
+                    std::cerr << "Received Error: " << errcode.message() << std::endl;
+                }
+
+                // Continue reading from the socket... Recalling itself!
+                //start_reading();
+                if (!errcode) {
+                    start_reading();
+                } else {
+                    std::cout << "[DEBUG] Not continuing read due to error: " << errcode.message() << std::endl;
+                }
+                
+            };
+            /* Completion token, is the final argument to an asynchronous operation's initiating function.
+             * E.g., if the user passes a lambda (or function object) as the completion token, the asynchronous operation begins and when completed the result is passed to the lambda.
+             *
+             * Reference: https://beta.boost.org/doc/libs/1_82_0/doc/html/boost_asio/overview/model/completion_tokens.html 
+             * */
+            this->tcp_socket.async_read_some(buffer(this->socket_buffer, 1024), read_handler_lambda);
+        
+        }
+
+        void SessionConnection::write_to_client(const std::vector<uint8_t>& response_msg){
+            std::cout << "Trying to call `write_to_client`" << std::endl; 
+            auto write_handler = [this](const boost::system::error_code& errcode, std::size_t byte_size){
+                if(!errcode && byte_size > 0){
+                    std::cout << "Message was successfully sent to the client" << std::endl;
+                }else {
+                    std::cerr << "Error sending to client, with error: " << errcode.message() << std::endl;
+                }
+            };
+
+            boost::asio::async_write(
+                    this->tcp_socket, 
+                    boost::asio::buffer(response_msg), 
+                    write_handler);
+        }
+
+        std::string SessionConnection::get_endpoint_stringz(){
+            auto client_endpoint = std::format("[{}:{}]: ",
+                    tcp_socket.remote_endpoint().address().to_string(), 
+                    tcp_socket.remote_endpoint().port()
+            );
+            return client_endpoint;
+        }
+
+        void SessionConnection::handle_request(const Message& message){
+            auto event_queue = Core::Game::getEventHandler();
+            
+            switch (message.rpc_type){
+                case Core::Network::RPCType::NewConnection: {
+                    std::cout << "RPC NewConnection" << std::endl;
+                    //event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
+                    break; 
+                }
+                case Core::Network::RPCType::StartGame: {
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    std::cout << "RPC StartGame" << std::endl;
+                    event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
+                    break;
+                }
+                case Core::Network::RPCType::NewRound: {
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    event_queue->store_eventmessage(Gameplay::Event::NextRound, message);
+                    break;
+                }                                        
+                case Core::Network::RPCType::DealCard: {
+                    //event_queue->push_event(Gameplay::Event::CardRequest);
+                    std::cout << "RPC DealCard" << std::endl;
+                    event_queue->store_eventmessage(Gameplay::Event::CardRequest, message);
+                    break;
+                }
+                case Core::Network::RPCType::LoadGame: {
+                    event_queue->store_eventmessage(Gameplay::Event::SynchronizeGame, message);
+                    break;
+                }
+                case Core::Network::RPCType::EnterWaiting: {
+                    break;
+                }                                       
+                case Core::Network::RPCType::PlayCard: {
+                    //event_queue->push_event(Gameplay::Event::CardReceived);
+                    event_queue->store_eventmessage(Gameplay::Event::CardPlayed, message);
+                    break;
+                }
+                case Core::Network::RPCType::Vote: {
+                    event_queue->store_eventmessage(Gameplay::Event::JudgeVoted, message);
+                    break;
+                }
+                case Core::Network::RPCType::DontCare: {
+                    //event_queue->store_eventmessage(Gameplay::Event::NetworkMessage, DontCare(unsigned short msg_id));
+                    break;
+                }
+            }
+        }
+       
+
+           
+    }
+}
+#pragma once
+
+#include "events.hpp"
+#include "game.hpp"
+#include "network/message.hpp"
+#include "network/network_component_interface.hpp"
+#include <array>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/system/detail/error_code.hpp>
+#include <boost/system/system_error.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <string>
+#include "network/client.hpp"
+
+namespace Core {
+    namespace Network {
+       
+        Client::Client(boost::asio::io_context& ctx, const std::string& host, unsigned short port) : io_ctx(ctx), client_socket(ctx){
+            
+            // Default constructor, that initialize the io_context and socket class objects.
+            
+            boost::asio::ip::tcp::resolver rslv(ctx);
+            boost::asio::ip::tcp::resolver::results_type endpoints;
+            boost::system::error_code errcode;
+            auto socket_err = client_socket.open(boost::asio::ip::tcp::v4(), errcode);
+
+            if (!socket_err) {
+                try {
+                    boost::asio::connect(client_socket, rslv.resolve(host, std::to_string(port)));
+
+                    auto local_endpoint = client_socket.local_endpoint();
+                    auto addr = local_endpoint.address().to_string();
+                    auto port = local_endpoint.port();
+                    this->client_id = (unsigned short)port;
+
+                    std::cout << "Client created, with Local Endpoint: " << addr+":" << port << std::endl;
+                    std::cout << "Connected to Server Endpoint: " << get_endpoint_string(client_socket) << std::endl;
+                    
+
+                }catch(boost::system::error_code& connection_error) {
+                    std::cerr << "Error Connecting to Server: " << connection_error.message() << std::endl;
+                } 
+            }
+            else {
+                std::cerr << "Error opening socket: " << socket_err.message() << std::endl;
+            }
+
+        }
+                
+        void Client::initialize(){
+            std::cout << "initialize (client class) - starting the async start_reading() loop now!" << std::endl; 
+            start_reading();
+        }
+
+        void Client::run(){
+            try {
+                this->io_ctx.run();
+                //this->io_ctx.poll();
+            } catch (boost::system::error_code& errcode) {
+                std::cerr << "IO Context 'run() method got error: " << errcode << std::endl;
+            }
+        }
+
+        void Client::handle_message(const Core::Network::Message& message){
+            /* Map external RPC message events to internal events, and add to shared event queue. */ 
+            auto event_queue = Core::Game::getEventHandler();
+            switch (message.rpc_type){
+                case Core::Network::RPCType::NewConnection: {
+                    //event_queue->push_event(Gameplay::Event::PlayerJoined); 
+                    event_queue->store_eventmessage(Gameplay::Event::PlayerJoined, message);
+                    break; 
+                }
+                case Core::Network::RPCType::StartGame: {
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    std::cout << "RPC StartGame" << std::endl;                    
+                    event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
+                    break;
+                }
+                                                     
+                case Core::Network::RPCType::NewRound: {
+                    //event_queue->push_event(Gameplay::Event::GameStarted);
+                    event_queue->store_eventmessage(Gameplay::Event::NextRound, message);
+                    break;
+                }
+                case Core::Network::RPCType::DealCard: {
+                    //event_queue->push_event(Gameplay::Event::CardReceived);
+                    //event_queue->store_message(message);
+                    std::cout << "RPC DealCard" << std::endl;
+                    event_queue->store_eventmessage(Gameplay::Event::CardReceived, message);
+                    break;
+                }
+                case Core::Network::RPCType::LoadGame: {
+                    //event_queue->push_event(Gameplay::Event::SynchronizeGame);
+                    std::cout << "RPC LoadGame" << std::endl;
+                    event_queue->store_eventmessage(Gameplay::Event::SynchronizeGame, message);     
+                    break;
+                }
+                case Core::Network::RPCType::EnterWaiting: {
+                    break;
+                }                                       
+                case Core::Network::RPCType::PlayCard: {
+                    break;
+                }
+                case Core::Network::RPCType::Vote: {
+                    event_queue->store_eventmessage(Gameplay::Event::StartVote, message);     
+                    break;
+                }
+                case Core::Network::RPCType::DontCare: {
+                    event_queue->store_eventmessage(Gameplay::Event::NetworkMessage, message);     
+                    break;
+                }                                   
+            }
+        }
+
+
+        void Client::send_message(const std::string& msg_payload){
+
+            auto write_handle = [this](const boost::system::error_code& errcode, std::size_t bytes_to_send){
+                if (!errcode && bytes_to_send > 0){
+                    std::cout << "Message was sent to the server, with no errors!" << std::endl;
+                }else {
+                    std::cerr << "Error sending message to the server: " << errcode.message() << std::endl;
+                }
+            };
+
+            boost::asio::async_write(
+                    this->client_socket, 
+                    boost::asio::buffer(msg_payload), 
+                    write_handle);
+        }
+
+        void Client::send_message_test(const std::vector<uint8_t>& msg_payload){
+            auto write_handle = [this](const boost::system::error_code& errcode, std::size_t bytes_to_send){
+                if (!errcode && bytes_to_send > 0){
+                    std::cout << "Message was sent to the server, with no errors!" << std::endl;
+                }else {
+                    std::cerr << "Error sending message to the server: " << errcode.message() << std::endl;
+                }
+            };
+
+            boost::asio::async_write(
+                    this->client_socket, 
+                    boost::asio::buffer(msg_payload), 
+                    write_handle); 
+        }
+
+
+        void Client::connect(){
+
+        }
+
+        void Client::start_reading(){
+            //TODO: 
+            //  1. Define and use the `async_read`
+            //  2. Pass socket, buffer and std::bind or lambda for callback handling of the async read.  
+          
+            // Is the below neccessary to pass to the capture block of the below lambda handler? 
+            //auto self = shared_from_this();  // Keep the connection alive during the async operation
+
+            auto read_handler = [this](const boost::system::error_code& errcode, std::size_t byte_size){
+                if(!errcode && byte_size > 0){
+                    //std::string received_data(this->client_buffer, byte_size);
+                    std::string received_data(this->client_buffer, this->client_buffer+byte_size);
+                    std::vector<uint8_t> received_bytes(this->client_buffer, this->client_buffer+byte_size);
+
+                    std::cout << std::setw(1) << std::left << ANSI_BOLD << ANSI_COLOR_GREEN << get_endpoint_string(this->client_socket) << ANSI_COLOR_RESET << "" <<  std::endl;
+                    
+                    //std::cout << get_endpoint_string(this->client_socket) << std::endl;
+                    //std::cout << get_endpoint_string(this->client_socket) << received_data << std::endl;
+
+                    //print_bytemessage(received_bytes); 
+                    auto msg = deserialize_message(received_bytes);
+                    handle_message(msg);
+                
+
+                }else if (errcode == boost::asio::error::eof) {
+                    std::cerr << errcode.what() << std::endl;
+                }else {
+                    throw boost::system::system_error(errcode);
+                    std::cerr << errcode.message() << std::endl;
+                }
+                
+                // Recursively call itself for continously reading data from the established socket connection.
+                start_reading();
+            };
+
+            this->client_socket.async_read_some(boost::asio::buffer(this->client_buffer, 1024), read_handler);
+            
+            //boost::asio::async_read(client_socket, boost::asio::buffer(client_buffer, 1024))
+        }
+
+           
+    }
+}
+#include "game_cli.hpp"
+#include <CLI/CLI.hpp>
+#include <CLI/App.hpp>
+#include <vector>
+
+namespace Core{
+    
+    void GameCLI::setup_arg_parser(){
+        auto host_subcommand = app.add_subcommand("host", "Host a server");
+        host_subcommand->add_option("-n, --number-players", num_players, "Number of players for the hosting game");
+        host_subcommand->add_option("-b,--number-bots", num_bots, "Number of bots for the hosting game");
+        host_subcommand->add_option("--ip", ip_address, "IP address endpoint, for the hosting server");
+        host_subcommand->add_option("--port", port, "Server Port, for the hosting game");
+
+
+        auto join_subcommand = app.add_subcommand("join", "Joining a hosted game server");
+        join_subcommand->add_option("-p,--player-id", player_id, "Unique player id for the joining player");        
+        join_subcommand->add_option("--ip", ip_address, "IP address endpoint to connect to");
+        join_subcommand->add_option("--port", port, "Server Port, for the hosting game");
+
+    }
+
+    void GameCLI::run_parser(int argc, char** argv){
+        //CLI11_PARSE(this->app, argc, argv);
+    }
+}
+#include <boost/asio.hpp>
+#include <iostream>
+#include "CLI/App.hpp"
+#include "CLI/CLI.hpp"
+#include "game_cli.hpp"
+#include "states.hpp"
+#include "game.hpp"
+
+using namespace Core;
+
+int main(int argc, char **argv){
+
+    /* 
+     * -NOTE: --> Check the CLI flags and create the generic 'Game' class depending on 'got_subcommand'
+     */
+
+    Game apples2apples; 
+    CLI11_PARSE(apples2apples.cli_menu.app, argc, argv);
+
+    /* Will initialize / allocate the network component pointer as either a 'Client' or 'Server' */
+    //apples2apples.test_logic();
+    apples2apples.setup_game();    
+    apples2apples.create_session();
+    //apples2apples.start_gameloop(); 
+
+    return 0;
+}
+#include "events.hpp"
+#include <memory>
+#include <mutex>
+#include <tuple>
+
+namespace Core {
+
+    namespace Gameplay{
+
+        void EventHandler::push_event(Event event){
+            std::lock_guard<std::mutex> lock(queue_mutex);
+            this->event_queue.push(event);
+        }
+
+        Event EventHandler::pop_event(){
+            std::lock_guard<std::mutex> lock(queue_mutex);
+            if (event_queue.empty()) {
+                throw std::runtime_error("No events to process");
+            }
+
+            Event event = event_queue.front();
+            this->event_queue.pop();
+            return event;
+        }
+
+        bool EventHandler::empty() {
+            std::lock_guard<std::mutex> lock(queue_mutex);
+            return this->event_queue.empty();
+        }
+
+        bool EventHandler::eventmsg_empty(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            return this->eventmsg_queue.empty();
+        }
+
+        void EventHandler::add_callback(Event event, std::function<void()> callback) {
+            this->callbacks[event] = callback;
+        }
+
+        void EventHandler::trigger_event(Event event) {
+            if (this->callbacks.find(event) != this->callbacks.end()){
+                this->callbacks[event]();
+            }
+        }
+
+        void EventHandler::store_message(const Network::Message& message){
+            std::lock_guard<std::mutex> lock(message_mutex);
+            message_queue.push(message);
+        }
+
+        void EventHandler::store_eventmessage(Event event, const Network::Message& message){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            auto event_message = std::make_tuple(event, message);
+            this->eventmsg_queue.push(event_message);
+        }
+
+        void EventHandler::pop_eventmessage(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            if(!eventmsg_queue.empty()){
+                eventmsg_queue.pop();
+            }
+        }
+
+        std::tuple<Event, Network::Message> EventHandler::get_eventmessage(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            if(!eventmsg_queue.empty()){
+                auto [event, message] = eventmsg_queue.front();
+                eventmsg_queue.pop();
+                return std::make_tuple(event, message);
+            }
+            return {};
+        }
+
+        Network::Message EventHandler::get_last_message(){
+            std::lock_guard<std::mutex> lock(message_mutex);
+            if (!message_queue.empty()){
+                auto msg = message_queue.front();
+                message_queue.pop();
+                return msg;
+            }
+            return {};
+        }
+
+        Event EventHandler::read_latest_event(){
+            std::lock_guard<std::mutex> lock(eventmsg_mutex);
+            if(!eventmsg_queue.empty()){
+                auto [event, message] = eventmsg_queue.front();
+                return event;
+            }
+            return {};
+        }
+
+
+    } 
+}
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "play_state.hpp"
+#include "states.hpp"
+#include <joingame_state.hpp>
+#include <memory>
+#include <ostream>
+#include <iostream>
+#include <thread>
+#include "game.hpp"
+
+namespace Core {
+    namespace Gameplay{
+
+        void JoinGameState::execute_state(){
+            // Here you might poll or receive continuous updates from the server
+            // Check if any status update is needed or if any other condition has been met
+            
+            std::string space_char = " ";
+            bool blink_flag = true;
+
+            //std::cout << "\033[2J\033[H" << std::flush; // clear the screen
+            //std::system("clear"); 
+        }
+
+        void JoinGameState::idle_state(){
+
+        }
+
+       
+        void JoinGameState::on_event(Context* context, Event event){
+            //auto& state_conditions = this->context->get_conditions();
+            auto event_handler = Core::Game::getEventHandler();
+            std::cout << "Inside JoinGameState on event" << std::endl;                
+             
+            if (event == Event::SynchronizeGame) {
+                event_handler->trigger_event(event);
+
+            }else if (event == Event::GameStarted) {
+                //this->context->set_state(PlayingState::create_instance()); 
+                //this->context->set_state(std::make_unique<PlayingState>()); 
+                std::cout << "Inside JoinGameState - GameStarted Event!" << std::endl;                
+                event_handler->trigger_event(event);
+
+            }else if (event == Event::PlayerJoined){
+                event_handler->trigger_event(event);
+
+            }else if (event == Event::CardReceived) {
+                std::cout << "Inside JoinGameState and CardReceived Event was invoked!" << std::endl;
+                event_handler->trigger_event(event);
+                std::cout << "Inside JoinGameState and CardReceive Event after triggering event callback" << std::endl;
+
+            }
+        }
+
+        bool JoinGameState::enough_players(){
+            auto& state_conditions = this->context->get_conditions();
+            return state_conditions.all_connected.load() == true;
+        }
+
+    }
+}
+#include "judge_state.hpp"
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
+
+namespace Core {
+    namespace Gameplay{
+        
+        void JudgeState::voting_action(){
+            std::cout << "Vote Action!" << std::endl;
+
+        }
+
+        void JudgeState::drawcard(){
+            std::cout << "Draw Card Action [JUDGE STATE]!" << std::endl;
+
+        }
+
+        void JudgeState::execute_state(){
+            //std::cout << "Executing Judge State" << std::endl;
+        }
+
+       
+
+        void JudgeState::idle_state(){
+
+        }
+
+        void JudgeState::on_event(Context* context, Event event){
+
+        }
+
+    }
+}
+#include "play_state.hpp"
+#include "events.hpp"
+#include "network/network_component_interface.hpp"
+#include "states.hpp"
+#include <iostream>
+
+namespace Core {
+    namespace Gameplay{
+
+        void PlayingState::drawcard(){
+            std::cout << "Draw Card Action! [PLAYING STATE]" << std::endl;
+        }
+
+        void PlayingState::playcard(){
+            std::cout << "Play Card Action! [PLAYING STATE]" << std::endl;
+        }
+
+        void PlayingState::execute_state(){
+            //std::cout << "Executing Playing State" << std::endl;
+        }
+
+        void PlayingState::idle_state(){
+
+        }
+
+        void PlayingState::on_event(Context* context, Event event){
+
+        }
+    }
+}
+#pragma once 
+
+#include "events.hpp"
+#include "game.hpp"
+#include "network/message.hpp"
+#include "network/server.hpp"
+#include "sessiontype.hpp"
+#include "states.hpp"
+#include <algorithm>
+#include <array>
+#include <format>
+#include <iostream>
+#include <memory>
+#include <numeric>
+#include <random>
+#include <string>
+#include <vector>
+#include "host.hpp"
+
+namespace Core {
+
+    void Host::setup_session(){
+        std::cout << "Setting up the Host-Session - by calling network->initialize()..." << std::endl;
+        network->initialize();
+    } 
+
+    void Host::run_session(){
+        std::cout << "Starting the Host-Session..." << std::endl;
+        //get_network_as<Network::Server>()->run();
+        network->run(); 
+    }
+
+    void Host::run_state(){
+
+    }
+
+    void Host::show_cards(CardType card_type){
+         if (card_type == CardType::RED){
+            for (auto card : this->red_deck){
+                std::cout << card << std::endl;
+            }
+            
+        }else if (card_type == CardType::GREEN){
+            for (auto card : this->green_deck){
+                std::cout << card << std::endl;
+            }
+        }
+    }
+
+    void Host::setup_host_callbacks(){
+        get_network_as<Network::Server>()->set_connection_callback([this](){
+            std::cout << "This callback is invoked whenever a new client has joined!" << std::endl;
+            auto clients = get_network_as<Network::Server>()->get_clients();
+            auto latest_client = clients.back();
+            auto client_id = latest_client->get_id();
+            
+            Game::getGameState().player_data[client_id] = GameData{false, false, 0, 0};
+
+            //Game::getEventHandler()->push_event(Gameplay::Event::PlayerJoined);            
+            std::cout << "Number of connected Clients: " << clients.size() << std::endl;
+            Game::getEventHandler()->store_eventmessage(Gameplay::Event::PlayerJoined, Network::DontCare());            
+            //Game::getEventHandler()->trigger_event(Gameplay::Event::PlayerJoined);            
+             
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::PlayerJoined, [this](){
+            Game::getEventHandler()->pop_eventmessage();
+            playerjoined_event();
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::GameReady, [this](){
+            std::cout << "GameReady Event - executing loadgame_request!" << std::endl;
+            //Game::getEventHandler()->pop_eventmessage();
+            loadgame_request();
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::CardRequest, [this](){
+            std::cout << "Trying to execute: 'card_request_event()'" << std::endl;            
+            auto [event, message] = Game::getEventHandler()->get_eventmessage();
+            card_request_event(message); 
+            std::cout << "Successfully executed: 'card_request_event()'" << std::endl;            
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::SynchronizeGame, [this](){
+            synchronize_game(); 
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::GameStarted, [this](){
+            // pop or process event msg here...
+            auto [event, message] = Game::getEventHandler()->get_eventmessage();
+            std::cout << "GameStarted Event - executing: 'startgame_message()'" << std::endl;
+            startgame_message();
+            std::cout << "Successfully - executed: 'startgame_message()'" << std::endl;
+            
+            //server->get_target_client(request_id)->write_to_client(byte_msg);
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::CardPlayed, [this](){
+            card_played_event(); 
+        });
+    }
+
+    void Host::card_request_event(Core::Network::Message message){
+        auto request_id = message.id;
+        std::string card_amount = message.payload;
+        //std::cout << "Received message.payload: " << card_amount << std::endl;
+                
+        int requested_card_amount = std::stoi(message.payload);
+        //std::cout << "Player requested: " << requested_card_amount << " cards." << std::endl;
+                
+        auto [red_cards, green_cards] = get_cards();
+        //std::cout << "Size of red cards deck: " << red_cards.size() << std::endl;
+               
+        //shuffle_cards();
+
+        deal_cards(request_id, requested_card_amount); 
+        //std::cout << "Size of red cards deck after dealing cards: " << red_cards.size() << std::endl; 
+    }
+
+    void Host::card_played_event(){
+        auto [event, message] = Game::getEventHandler()->get_eventmessage();   
+        auto game_rules = Game::getGameRules();        
+        auto server = get_network_as<Network::Server>();
+        auto sender_id = server->get_server_id();
+         
+        //TODO: - Add some hashmap or identifier for the associated client with the played card!
+        //E.g., Creating a 'GameRound' struct, for checking which player, has played, who is judge etc...
+        add_to_round_deck(message.payload);
+        size_t expected_played_cards = get_client_count() + game_rules.num_bots;
+
+        if (get_cardplayed_count() == expected_played_cards){
+            auto played_cards = get_round_deck();
+            auto cards_payload = Network::join_strings(played_cards, '/');
+            auto msg = Network::create_message(Network::MessageType::Request, server->get_server_id(), Network::RPCType::Vote, cards_payload); 
+        }
+    }
+
+    void Host::playerjoined_event(){
+        // Logic for whenever, player joined event has occured. 
+        this->client_count++;
+        auto game_rules = Core::Game::getGameRules();
+        int num_clients = (int)this->client_count;
+        auto server = get_network_as<Network::Server>();        
+        auto sender_id = server->get_server_id();
+        auto total_players = get_client_count() + game_rules.num_bots;
+        
+
+        if (num_clients == game_rules.expected_players){
+            //startgame_message();          
+            //std::cout << "Trying to invoke GameReady Event!" << std::endl;
+            //Game::getEventHandler()->store_eventmessage(Gameplay::Event::GameReady, Network::DontCare());
+            Game::getEventHandler()->trigger_event(Gameplay::Event::GameReady);
+            
+        }else {
+            // Send update of count to Clients
+            auto update_msg = Network::create_message(Network::MessageType::Response, sender_id, Network::RPCType::NewConnection, std::to_string(num_clients));
+            send_update(update_msg); 
+        }
+    }
+
+    void Host::send_update(Network::Message msg){
+        auto server = get_network_as<Network::Server>();        
+        auto sender_id = server->get_server_id();
+        auto byte_msg = Network::serialize_message(msg);
+
+        for(auto& client : server->get_clients()){
+            client->write_to_client(byte_msg);
+        }
+    }
+
+    void Host::deal_cards(unsigned short request_id, int request_amount){
+        std::cout << "Inside Host::deal_cards() logic!" << std::endl;
+        
+        auto server = get_network_as<Network::Server>();
+        auto sender_id = server->get_server_id();
+        std::vector<std::string> cards_to_send;
+
+        for (int i = 0; i < request_amount; i++){
+            auto card = this->red_deck[0];
+            this->red_deck.erase(this->red_deck.begin());
+            cards_to_send.push_back(card);
+        }
+        
+        auto response_payload = Network::join_strings(cards_to_send, '/');
+        //std::cout << "In 'deal_cards' logic, cards to send as payload: " << response_payload << std::endl;
+        auto response_msg = Network::create_message(Network::MessageType::Response, sender_id, Network::RPCType::DealCard, response_payload);
+        auto byte_msg = Network::serialize_message(response_msg);
+        server->get_target_client(request_id)->write_to_client(byte_msg);
+        std::cout << "In 'deal_cards' logic - Successful! " << std::endl;
+        
+    }
+
+    std::string Host::take_card(CardType card_type){
+        std::string card; 
+        if (card_type == CardType::GREEN){
+            card = std::move(this->green_deck[0]);
+            this->green_deck.erase(this->green_deck.begin());
+        }else {
+            card = std::move(this->red_deck[0]);
+            this->red_deck.erase(this->red_deck.begin());
+        }
+        return card; 
+    }
+
+    void Host::shuffle_cards(){
+        std::cout << "Shuffling the Red- & -Green Apple decks" << std::endl;
+        std::random_device rdevice;
+        std::mt19937 generator(rdevice());
+        std::shuffle(this->red_deck.begin(), this->red_deck.end(), generator);
+        std::shuffle(this->green_deck.begin(), this->green_deck.end(), generator);
+    }
+
+    void Host::loadgame_request(){
+        std::cout << "Inside loadgame_request()!" << std::endl;
+        
+        auto server = this->get_network_as<Network::Server>();
+        std::string visable_round_card = take_card(CardType::GREEN);
+        auto msg = Network::create_message(
+                Network::MessageType::Request, 
+                server->get_server_id(),
+                Network::RPCType::LoadGame, 
+                visable_round_card);
+        auto byte_message = Network::serialize_message(msg);
+
+        for(auto& client : server->get_clients()){
+            client->write_to_client(byte_message);
+        }
+        std::cout << "Inside loadgame_request() - Successful" << std::endl;
+        
+    }
+
+    void Host::synchronize_game(){
+        std::cout << "Starting Loading and Synchronizing of the Game!" << std::endl;
+    }
+
+    void Host::startgame_message(){
+        std::cout << "Inside Start game message logic!" << std::endl;
+        
+        pick_judge();
+        
+        auto server = this->get_network_as<Network::Server>();
+        std::string judge_payload = Gameplay::StateTypeToString(Gameplay::StateTypes::Judge);
+        std::string playing_payload = Gameplay::StateTypeToString(Gameplay::StateTypes::Playing);
+
+        auto judge_msg = Network::create_message(
+                Network::MessageType::Response,
+                server->get_server_id(),
+                Network::RPCType::StartGame, 
+                judge_payload);
+
+        auto playing_msg = Network::create_message(
+                Network::MessageType::Response,
+                server->get_server_id(),
+                Network::RPCType::StartGame, 
+                playing_payload);
+
+        for(auto& client: server->get_clients()){
+            //std::cout << "Inside Start game message logic and in the for loop!" << std::endl;
+            //std::cout << "client id: " << client->get_id() << std::endl;
+            //std::cout << "judge_idx_iter -> client id: " << (*judge_idx_iter) << std::endl;
+             
+            if (client->get_id() == (*this->judge_idx_iter)->get_id()){
+                std::cout << "Found Judge index iterator ID" << std::endl;
+                auto byte_message = Network::serialize_message(judge_msg); 
+                client->write_to_client(byte_message);
+            }else {
+                std::cout << "In else branch for sending 'Playing' start state!" << std::endl;
+                auto byte_message = Network::serialize_message(playing_msg); 
+                client->write_to_client(byte_message);
+            }
+
+        }
+        std::cout << "Inside Start game message logic, successfully ran all!" << std::endl;
+
+        //update_judge();
+    }
+
+    void Host::next_round_transition(){
+        // 1. Append all played card in the round_card vector.
+        // 2. Check if all players have sent a "PlayCard" request. 
+        // 3. If all have played, send RPC message to judge iterator to perform voting event action.
+        // 4. Listen for whenever judge client have sent RPC JudgeVote then send point to winner... and repeat...
+        // 5. Also draw a new green apple card every new round.
+        auto server = this->get_network_as<Network::Server>();
+        
+
+        update_judge();
+        auto new_judge = this->judge_idx_iter->get()->get_id();
+        auto new_round_msg = Network::create_message(Network::MessageType::Request, server->get_server_id(), Network::RPCType::NewRound, "judge/nojudge");
+    }
+
+    void Host::pick_judge(){
+        // 1. Pick randomized judge. 
+        // 2. Update the judge_ptr_idx iterator position
+        // 3. After sending, update the judge_ptr_idx for the next upcoming round.
+        
+        std::cout << "Executing: 'pick_judge'!" << std::endl;
+        
+        auto server = this->get_network_as<Network::Server>();
+        auto& clients = server->get_clients();
+        std::vector<int> range_vec(clients.size());
+        std::iota(range_vec.begin(), range_vec.end(), 0);
+         
+        std::random_device rdevice;
+        std::mt19937 generator(rdevice());
+        std::uniform_int_distribution<int> distribution(0, clients.size() - 1);
+        
+        int iterator_offset = distribution(generator);
+        //std::cout << "iterator offset: " << iterator_offset << std::endl;
+        auto jdg_idx = clients.begin() + iterator_offset;
+        //std::cout << "jdg_idx client id: " << (*jdg_idx)->get_id() << std::endl;
+        this->judge_idx_iter = clients.begin() + iterator_offset;
+    
+        /*
+        if (clients.size() == 1){
+            this->judge_idx_iter = clients.begin();
+        }else {
+            this->judge_idx_iter = clients.begin() + iterator_offset;
+        }
+        */
+    }
+
+    void Host::update_judge(){
+        auto server = this->get_network_as<Network::Server>();
+        auto clients = server->get_clients();
+        if (this->judge_idx_iter != clients.end()){
+            this->judge_idx_iter++;
+        }else {
+            // Go back to beginning of vector
+            this->judge_idx_iter = clients.begin();
+        }
+    }
+    
+}
+#pragma once 
+
+#include "events.hpp"
+#include "joingame_state.hpp"
+#include "judge_state.hpp"
+#include "network/client.hpp"
+#include "network/message.hpp"
+#include "play_state.hpp"
+#include "sessiontype.hpp"
+#include "states.hpp"
+#include <boost/asio/buffer.hpp>
+#include <cstddef>
+#include <iostream>
+#include <memory>
+#include <ostream>
+#include <sstream>
+#include <vector>
+#include "player.hpp"
+#include "game.hpp"
+
+namespace Core {
+
+    using namespace boost::asio::buffer_literals;
+   
+    void Player::setup_session(){
+        std::cout << "Setting up the Player Session - by calling network->initialize()..." << std::endl;
+        network->initialize();
+    }
+
+    void Player::run_session(){
+        std::cout << "Starting the Player Session..." << std::endl;
+        network->run();
+    }
+
+    void Player::run_state(){
+        /*
+         * Handle Inputs from the player.
+         * Send the player's actions to the host via the 'Client' member.
+         * Receives Updates, by listening for updates from the host and updates the local game state.
+         */
+        if (this->state_context){
+            this->state_context->execute_state();
+        }
+    }
+
+    std::string Player::show_cards(){
+        std::stringstream ss;
+        for (auto card : this->red_cards){
+            ss << card <<"\n";
+        }
+        std::cout << "Red cards: \n" << ss.str() << std::endl;
+        std::string cards = ss.str();
+        return cards;
+    }
+
+    void Player::switch_state(std::unique_ptr<Gameplay::GameState> new_state){
+        this->state_context->set_state(std::move(new_state));
+    }
+
+    void Player::setup_context(std::unique_ptr<Gameplay::GameState> state){
+        //this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
+        if (!state_context) {
+            this->state_context = std::make_unique<Gameplay::Context>(std::move(state));
+        } else {
+            this->state_context->set_state(std::move(state));
+        }
+    }
+
+    void Player::setup_player_callbacks(){
+
+        //NOTE: - Its important to pop the event message queue, to mark it as handle. 
+        //        Even though, you dont need to read anything. To prevent infinite loops!
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::PlayerJoined, [this](){
+            std::cout << "PlayerJoined Event Callback!" << std::endl;            
+            auto [event, update_msg] = Game::getEventHandler()->get_eventmessage();
+            playerjoined_update(update_msg);
+            // runt event trigger methods here...
+            //1. Read received event message, and print out the connected count.
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::SynchronizeGame, [this](){
+            std::cout << "SynchronizeGame Event Callback!" << std::endl;            
+            
+            auto [event, received_msg] = Game::getEventHandler()->get_eventmessage();
+            update_round_card(received_msg.payload); 
+            synchronize_game();
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::GameStarted, [this](){
+            auto [event, received_msg] = Game::getEventHandler()->get_eventmessage();
+            std::cout << "GameStarted Event, received: " << received_msg.payload << std::endl;            
+            Gameplay::StateTypes start_state = Gameplay::StringToStateType(received_msg.payload);
+
+            std::cout << "Round Card: " << get_round_card() << std::endl;
+
+            if (start_state == Gameplay::StateTypes::Judge){
+                this->state_context->set_state(Gameplay::JudgeState::create_instance());
+                auto current_state = this->state_context->active_state();
+                std::string start_state = Gameplay::StateTypeToString(current_state);                
+            }else if (start_state == Gameplay::StateTypes::Playing){
+                this->state_context->set_state(Gameplay::PlayingState::create_instance()); 
+                auto current_state = this->state_context->active_state();
+                std::string start_state = Gameplay::StateTypeToString(current_state);
+            }
+
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::GameReady, [this](){
+            std::cout << "GameReady Event Callback invoked by Player!" << std::endl;
+            //auto [event, received_msg] = Game::getEventHandler()->get_eventmessage();
+            send_rpc(Network::MessageType::Request, Network::RPCType::StartGame, "Ready, and have received my cards!");
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::CardReceived, [this](){
+            std::cout << "CardReceived Event Callback invoked by Player!" << std::endl;
+            auto [event, received_msg] = Game::getEventHandler()->get_eventmessage();
+            cards_response(received_msg);
+        });
+    }
+
+    void Player::update_round_card(std::string open_card){
+        this->round_card = open_card;
+    }
+
+    void Player::synchronize_game(){
+        //1. First we send RPCType::DealCard to obtain the individual player cards.
+        //2. Secondly 
+        
+        request_cards(7);
+        Game::getEventHandler()->trigger_event(Gameplay::Event::GameReady);
+        
+        //send_rpc(Network::MessageType::Request, Network::RPCType::StartGame, "Ready, and have received my cards!");
+        //send_rpc(Network::MessageType::Response, Network::RPCType::LoadGame, "I am ready, start the game!");         
+    }
+
+    void Player::cards_response(Network::Message response_msg){
+        //Network::print_message(received_msg);
+        if(!response_msg.payload.empty() && response_msg.rpc_type == Network::RPCType::DealCard){
+            auto cards = Network::split_string(response_msg.payload, '/');
+            add_cards(cards);
+            //show_cards();
+
+        }   
+    }
+
+    void Player::playerjoined_update(Network::Message update_msg){
+        std::string waiting_screen = std::format("Waiting to start the game!\nConnected players: {}", update_msg.payload);
+        std::cout << waiting_screen << std::endl;
+    }
+
+    void Player::request_cards(int num_cards){
+        auto msg_id = get_network_as<Network::Client>()->get_client_id();
+        int modified_num_cards = num_cards;
+
+        while(true){
+            if (this->red_cards.size() + modified_num_cards <= 7){
+                break; 
+            }else{
+                modified_num_cards--;
+            }
+        }
+        
+        std::cout << "In 'request_cards' logic, modified_num_cards: " << modified_num_cards << std::endl;
+        auto amount_payload = std::to_string(static_cast<int>(modified_num_cards));
+        auto msg = Network::create_message(Network::MessageType::Request, msg_id, Network::RPCType::DealCard, amount_payload);
+        auto byte_message = Network::serialize_message(msg);
+        get_network_as<Network::Client>()->send_message_test(byte_message);
+    }
+
+    void Player::send_rpc(Network::MessageType msg_type, Network::RPCType rpc_type, std::string payload){
+        std::cout << "Inside 'send_rpc()!" << std::endl;
+        
+        auto msg_id = get_network_as<Network::Client>()->get_client_id();
+        auto request_msg = Network::create_message(msg_type, msg_id, rpc_type, payload);
+        auto byte_message = Network::serialize_message(request_msg);
+        get_network_as<Network::Client>()->send_message_test(byte_message);
+        //this->network->send_message(const std::string &msg_payload)
+        std::cout << "Inside 'send_rpc() After!" << std::endl;
+        
+    }
+
+    bool Player::is_in_state(Gameplay::StateTypes state_type) const {
+        if (this->state_context){
+            return this->state_context->active_state() == state_type;
+        }
+        return false; 
+    }
+   
+
+}
+#include "game.hpp"
+#include "CLI/App.hpp"
+#include "events.hpp"
+#include "game_cli.hpp"
+#include "host.hpp"
+#include "joingame_state.hpp"
+#include "judge_state.hpp"
+#include "network/client.hpp"
+#include "network/message.hpp"
+#include "network/server.hpp"
+#include "play_state.hpp"
+#include "player.hpp"
+#include "states.hpp"
+#include "config.h"
+
+#include <boost/asio/executor_work_guard.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace Core{
+ 
+    std::shared_ptr<Gameplay::EventHandler> Game::event_handler = std::make_shared<Gameplay::EventHandler>();
+    GameRules Game::rules;
+    GameState Game::game_state;
+
+    GameRules new_gamerules(int num_player, int num_bots, std::string game_mode){
+        GameRules rules; 
+        rules.expected_players = num_player;
+        rules.num_bots = num_bots;
+        rules.game_mode = game_mode;
+        auto total_players = num_player + num_bots;
+
+        if (total_players == 4){
+            rules.points_to_win = 8;
+        }else if (total_players == 5){
+            rules.points_to_win = 7;
+        }else if (total_players == 6){
+            rules.points_to_win = 6;
+        }else if (total_players == 7){
+            rules.points_to_win = 5;
+        }else if (total_players > 7){
+            rules.points_to_win = 4;
+        }
+        return rules;
+    } 
+
+    Game::Game() {
+        cli_menu.setup_arg_parser();
+        //setup_eventcallbacks();
+    }
+
+    void Game::setup_game(){
+        std::cout << "Setting up the game, and game rules. Please wait for players to connect..." << std::endl;
+        GameRules rules;  
+        auto active_subcommand = this->cli_menu.app.get_subcommand("host");
+
+        if (!(active_subcommand->get_option("--number-players")->empty())){
+            if (this->cli_menu.num_players < 4){
+                if (this->cli_menu.num_players == 1){
+                    rules = new_gamerules(this->cli_menu.num_players, 3, "default");
+                }else if (this->cli_menu.num_players == 2){
+                    rules = new_gamerules(this->cli_menu.num_players, 2, "default");
+                }else if (this->cli_menu.num_players == 3){
+                    rules = new_gamerules(this->cli_menu.num_players, 1, "default");
+                }
+                
+            }else{
+                // Number of players flag > 4, then num_bots = 0
+                rules = new_gamerules(this->cli_menu.num_players, 0, "default");
+            }
+        }else{
+            rules = new_gamerules(1, 3, "default");  
+        }
+
+        if (this->cli_menu.app.got_subcommand("host")){
+            apply_gamerules(rules);
+        }
+    }
+
+    void Game::apply_gamerules(GameRules game_rules){
+        std::string rules_string = std::format("Game Rules: \nNumber of player = {}\nNumber of bots = {}\nPoints to win = {}\nMode = {}", 
+                game_rules.expected_players, 
+                game_rules.num_bots, 
+                game_rules.points_to_win, 
+                game_rules.game_mode);
+        
+        std::cout << rules_string << std::endl;
+        this->rules = game_rules;
+
+        add_bots(game_rules.num_bots);
+    }
+
+    void Game::add_bots(int num_bots){
+        // TODO: - Fix add_bots logic, maybe define a struct containing: 
+        // a 'GameData' field, bot id, red_cards, and green_cards.
+    }
+
+    void Game::test_logic(){
+        std::cout << "Running test_serialization logic: \n" << std::endl;
+        Core::Network::Message msg;
+        msg.type = Core::Network::MessageType::Request;
+        msg.id = 1234;
+        msg.rpc_type = Core::Network::RPCType::DealCard;
+        msg.payload = "This is a Player message test!";
+        auto byte_message = Core::Network::serialize_message(msg);
+
+        std::cout << "Testing deserialization logic: \n" << std::endl;
+        auto decoded_msg = Core::Network::deserialize_message(byte_message);
+    }
+
+    void Game::create_session(){
+
+         if (this->cli_menu.app.got_subcommand("host")){
+            std::cout << "Welcome to Apples 2 Apples - Hosting server now [SERVER]..." << std::endl;
+            this->cli_menu.host_server = true;
+            
+            // TODO: Fix parse logic for the port, now hard coded to 2048...
+            this->cli_menu.port = 2048;
+
+            boost::asio::io_context io_context_;
+            auto* host = create_session_as<Host>();
+            auto endpoint = create_endpoint();
+            host->add_network_component(std::make_unique<Network::Server>(io_context_, endpoint));
+            
+
+            auto [red_cards, green_cards] = host->get_cards();
+            std::string config_path = CONFIG_FILE_PATH;
+            load_config_to(config_path+"redApples.txt", red_cards);
+            load_config_to(config_path+"greenApples.txt", green_cards);
+            host->shuffle_cards();
+
+            /* Setting up the host session, by calling neccessary async operations for the Server */
+            //host->setup_session();
+            session->setup_session();
+
+            /* Starts the session by running the io_context.run() in a separate thread */
+            std::thread server_thread([this](){
+                //auto host = get_session_as<Host>();
+                this->session->run_session();
+            });
+            
+            setup_eventcallbacks();
+            start_gameloop();
+
+            server_thread.join();
+
+        } else if (this->cli_menu.app.got_subcommand("join")){
+            std::cout << "Welcome to Apples 2 Apples - Joining game, please wait [CLIENT]..." << std::endl;
+            this->cli_menu.host_server = false;
+             // TODO: Fix parse logic for the port, now hard coded to 2048...
+            this->cli_menu.port = 2048;
+            
+            //auto host_address = this->cli_menu.ip_address;
+            boost::asio::io_context io_context_;
+            auto host_address = create_endpoint().address().to_string();
+            
+            auto* player = create_session_as<Player>();
+            player->add_network_component(std::make_unique<Network::Client>(io_context_, host_address, this->cli_menu.port));
+
+            //player->get_context() = std::make_unique<Gameplay::Context>(std::make_unique<Gameplay::JoinGameState>());
+            //player->setup_context(std::make_unique<Gameplay::JoinGameState>());
+            //player->setup_context(Gameplay::JoinGameState::create_instance());
+            //player->get_context()->set_state(Gameplay::JoinGameState::create_instance());
+            
+            player->setup_context(Gameplay::JoinGameState::create_instance());
+
+            //player->setup_session();
+            session->setup_session();
+
+            /* Starts the session by running the io_context.run() in a separate thread */
+            std::thread client_thread([this](){
+                this->session->run_session();
+            });
+
+            //player->request_cards(7);
+            setup_eventcallbacks();
+            start_gameloop();
+
+            client_thread.join();
+        }
+
+    }
+
+    boost::asio::ip::tcp::endpoint Game::create_endpoint(){
+        auto subcommand = [this]() -> CLI::App*{
+            auto host_subcommand = this->cli_menu.app.get_subcommand("host");
+            auto join_subcommand = this->cli_menu.app.get_subcommand("join");
+
+            if (host_subcommand->parsed()){
+                return host_subcommand; 
+            }else if (join_subcommand->parsed()){
+                return join_subcommand;
+            }
+            return nullptr;
+        };
+
+        auto active_subcommand = subcommand();
+        if (!(active_subcommand->get_option("--ip")->empty())){
+            // If the option --ip was passed we create a specific endpoint to this address 
+            if (this->cli_menu.ip_address == "localhost"){
+                this->cli_menu.ip_address = "127.0.0.1";
+            }
+            std::cout << "--ip option was passed as hosting address: " << this->cli_menu.ip_address << std::endl; 
+            auto endpoint_addr = boost::asio::ip::make_address(this->cli_menu.ip_address); 
+            return boost::asio::ip::tcp::endpoint(endpoint_addr, this->cli_menu.port);
+
+        }else {
+            // This would listen on all IPv4 addresses (e.g., '0.0.0.0:port')
+            std::cout << "--ip flag was empty, so listening on all v4 addresses (0.0.0.0:PORT) at specifed port... " << std::endl; 
+            return boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), this->cli_menu.port);
+        }
+    }
+
+    void Game::load_config_to(const std::string config_filepath, std::vector<std::string>& target_data){
+        std::filesystem::path config_path = config_filepath;
+        std::ifstream config_file(config_path);
+        std::vector<std::string> cards;
+        
+        if (!config_file.is_open()){
+            std::cerr << "Failed to load game config file: " << config_path << std::endl;
+        }
+
+        std::string card_string; 
+        while (std::getline(config_file, card_string)){
+            cards.push_back(card_string);
+            target_data.push_back(card_string);
+        }
+        config_file.close();
+    }
+
+    //TODO: - Wrap the event callback logic to Player or Host method for more clean code:
+
+    void Game::setup_eventcallbacks(){
+        if(this->cli_menu.host_server == true){
+            auto session = get_session_as<Host>();
+            session->setup_host_callbacks();
+            
+        }else if (this->cli_menu.host_server == false){
+            auto player = this->get_session_as<Player>();
+            player->setup_player_callbacks();
+        }
+    }
+
+    void Game::process_events(){
+        while (!this->event_handler->eventmsg_empty()) {
+            std::cout << "Event message Queue is not empty, processing events..." << std::endl;
+            //auto [event, message] = event_handler->get_eventmessage(); // This would pop from the queue. 
+            auto event = event_handler->read_latest_event(); // Do not pop, just read front of queue.
+            if(this->cli_menu.host_server == true){
+                auto session = get_session_as<Host>();
+                // Define event handling for the Host class
+                this->event_handler->trigger_event(event); // Requries to add_callback to map first.
+                std::cout << "Event in queue: " << Gameplay::EventToString(event) << std::endl;
+            }else {
+                //NOTE: - Should I handle the events here in 'process_event()' or in each unique state?                
+                std::cout << "Event in queue: " << Gameplay::EventToString(event) << std::endl;                
+                auto session = get_session_as<Player>();
+                auto& context = session->get_context();
+                context->event_handler(event);
+                //this->event_handler->trigger_event(event);
+            }
+        }
+    }
+
+    void Game::render_game(const std::string &update_string, const std::string &update_value){
+        //std::cout << std::setw(1) << std::left << ANSI_BOLD << ANSI_COLOR_GREEN <<  get_endpoint_stringz() << ANSI_COLOR_RESET << "" <<  std::endl;
+
+        std::stringstream ss;
+        std::string status_string = std::format("{}: {}", update_string, update_value);
+        ss << "| GAME MENU | \n";
+        ss << "1. Play Card\n" << "2. Show Cards\n";
+        ss << "Game points: " << this->get_session_as<Player>()->get_points() << "\n";
+        ss << status_string;
+
+        std::cout << ss.str() << std::endl;
+    }
+
+    //TODO: - Add a double buffering for current and next frame.
+    // So in the background the next frame is being loaded and updated. 
+    // Once the next frame is fully rendered the two buffers are swapped. 
+
+    void Game::process_input(){
+        //TODO: - Handle user inputs, where user input generate events that are processed by the game loop.
+        //std::cout << "In 'process_input'" << std::endl;
+        auto player = get_session_as<Player>();
+
+        char input;
+        std::cin >> input;
+        if (!std::cin.fail()){
+            switch (input) {
+                case '1':{
+                    // Should move to a new submenu showing the available cards... 
+                    
+                    break;
+                }
+                case '2':{
+                    // Outputs the red cards in the array.
+                    std::string red_cards = player->show_cards();
+                    render_game("Red apple cards", red_cards);
+                    break;
+                }
+                default: 
+                    std::cout << "Invalid option, try again!" << std::endl;
+            }
+        }
+        std::cin.clear();
+    }
+
+    void Game::start_gameloop(){
+        while(true) {
+
+            //std::cout << "\033[2J\033[H"; // Clear screen and move cursor to top
+
+            // This method should push input events to the event queue. By polling and capturing input events
+            
+            if(this->cli_menu.host_server == false){
+                //process_input();
+                
+                // This method should handle the core logic of the current game state. Its called every frame.
+                session->run_state();
+            }
+
+            process_events();
+        }
+    }
+}

@@ -51,9 +51,10 @@ namespace Core {
             const unsigned char* msgtype_data = static_cast<const unsigned char*>(sending_buffer.data());
             const unsigned char* rpctype_data = static_cast<const unsigned char*>(sending_buffer.data()+sizeof(message.type));
             
-            print_message(message);
+            //print_message(message);
             //print_bytemessage(sending_buffer);
 
+            /*
             std::cout << "\nThe serialized message as byte array: " << std::endl;
             std::cout << "[";            
             for (uint8_t byte : sending_buffer) {
@@ -61,7 +62,7 @@ namespace Core {
                 std::cout << static_cast<int>(byte) << " ";
             }
             std::cout << "]" << std::endl;       
-            
+            */
 
             return sending_buffer;
         }
@@ -93,18 +94,18 @@ namespace Core {
             return msg;
         }
 
-        std::string join_strings(const std::vector<std::string>& vec, char delimiter = ','){
+        std::string join_strings(const std::vector<std::string>& vec, char delimiter = '/'){
             std::ostringstream oss;
             std::copy(vec.begin(), vec.end(), std::ostream_iterator<std::string>(oss, &delimiter));
             std::string joined_string = oss.str();
-
+            //std::cout << "Joined string:\n" << joined_string << std::endl;
             if (!joined_string.empty()){
                 joined_string.pop_back();
             }
             return joined_string;
         }
 
-        std::vector<std::string> split_string(const std::string& str, char delimiter = ','){
+        std::vector<std::string> split_string(const std::string& str, char delimiter = '/'){
             std::vector<std::string> string_vec;
             std::istringstream iss(str);
             std::string token;

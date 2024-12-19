@@ -16,7 +16,7 @@ namespace Core {
         * @brief JudgeState class which inherits the GameState interface. 
         * This class act as a unique state during the game, and allow only judge specific actions.
         */
-        class JudgeState : public Gameplay::GameState{
+        class JudgeState : public Core::Gameplay::GameState{
             public:
               
                 JudgeState(const JudgeState&) = delete; // remove copy constructor.
@@ -42,10 +42,10 @@ namespace Core {
                 /* Await the players for that round to play their red cards. */
                 void idle_state() override;
                 
-                void on_event(Context *context, Event event) override; 
+                void on_event(Core::Gameplay::Context *context, Event event) override; 
 
             private:
-                std::map<PlayerID, Card> received_cards;
+                std::map<PlayerID, Card> received_cards{};
                 JudgeState() {}
 
             protected:

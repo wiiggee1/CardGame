@@ -7,12 +7,14 @@
 #include <array>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/connect.hpp>
+#include <boost/asio/error.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/system/detail/error_code.hpp>
+#include <boost/system/system_error.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -79,6 +81,7 @@ namespace Core {
                 }
                 case Core::Network::RPCType::StartGame: {
                     //event_queue->push_event(Gameplay::Event::GameStarted);
+                    std::cout << "RPC StartGame" << std::endl;                    
                     event_queue->store_eventmessage(Gameplay::Event::GameStarted, message);
                     break;
                 }
@@ -97,6 +100,7 @@ namespace Core {
                 }
                 case Core::Network::RPCType::LoadGame: {
                     //event_queue->push_event(Gameplay::Event::SynchronizeGame);
+                    std::cout << "RPC LoadGame" << std::endl;
                     event_queue->store_eventmessage(Gameplay::Event::SynchronizeGame, message);     
                     break;
                 }
@@ -173,11 +177,15 @@ namespace Core {
                     //std::cout << get_endpoint_string(this->client_socket) << std::endl;
                     //std::cout << get_endpoint_string(this->client_socket) << received_data << std::endl;
 
-                    print_bytemessage(received_bytes); 
+                    //print_bytemessage(received_bytes); 
                     auto msg = deserialize_message(received_bytes);
                     handle_message(msg);
+                
 
+                }else if (errcode == boost::asio::error::eof) {
+                    std::cerr << errcode.what() << std::endl;
                 }else {
+                    throw boost::system::system_error(errcode);
                     std::cerr << errcode.message() << std::endl;
                 }
                 
@@ -186,6 +194,7 @@ namespace Core {
             };
 
             this->client_socket.async_read_some(boost::asio::buffer(this->client_buffer, 1024), read_handler);
+            
             //boost::asio::async_read(client_socket, boost::asio::buffer(client_buffer, 1024))
         }
 

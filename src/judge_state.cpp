@@ -17,7 +17,7 @@ namespace Core {
         }
 
         void JudgeState::execute_state(){
-            std::cout << "Executing Judge State" << std::endl;
+            //std::cout << "Executing Judge State" << std::endl;
         }
 
        

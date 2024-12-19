@@ -96,9 +96,11 @@ namespace Core {
         std::shared_ptr<SessionConnection> Server::get_target_client(unsigned short connection_id){
             for (auto target_client: this->clients){
                 if (target_client->get_id() == connection_id){
+                    std::cout << "Found target client ID: " << target_client->get_id() << std::endl;
                     return target_client;
                 }
             }
+            std::cout << "Didn't find target client ID, returning 'nullptr'!" << std::endl;
             return nullptr;
         }
            

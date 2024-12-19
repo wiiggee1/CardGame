@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/wiiggee1/Desktop/School/homeexam_d7032e/tests/game_test.cpp" "tests/CMakeFiles/tests.dir/game_test.cpp.o" "gcc" "tests/CMakeFiles/tests.dir/game_test.cpp.o.d"
+  "" "tests/tests" "gcc" "tests/CMakeFiles/tests.dir/link.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

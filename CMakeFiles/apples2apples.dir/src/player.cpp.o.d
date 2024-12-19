@@ -1,8 +1,7 @@
 CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/src/player.cpp \
  /usr/include/stdc-predef.h \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/joingame_state.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/events.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/message.hpp \
  /usr/include/c++/14.2.1/cstdint \
  /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/c++config.h \
@@ -156,6 +155,62 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/c++/14.2.1/bits/stl_vector.h \
  /usr/include/c++/14.2.1/bits/stl_bvector.h \
  /usr/include/c++/14.2.1/bits/vector.tcc \
+ /usr/include/c++/14.2.1/functional \
+ /usr/include/c++/14.2.1/bits/std_function.h \
+ /usr/include/c++/14.2.1/unordered_map \
+ /usr/include/c++/14.2.1/bits/unordered_map.h \
+ /usr/include/c++/14.2.1/bits/hashtable.h \
+ /usr/include/c++/14.2.1/bits/hashtable_policy.h \
+ /usr/include/c++/14.2.1/ext/aligned_buffer.h \
+ /usr/include/c++/14.2.1/bits/enable_special_members.h \
+ /usr/include/c++/14.2.1/bits/node_handle.h \
+ /usr/include/c++/14.2.1/bits/erase_if.h /usr/include/c++/14.2.1/array \
+ /usr/include/c++/14.2.1/map /usr/include/c++/14.2.1/bits/stl_tree.h \
+ /usr/include/c++/14.2.1/bits/stl_map.h \
+ /usr/include/c++/14.2.1/bits/stl_multimap.h \
+ /usr/include/c++/14.2.1/memory \
+ /usr/include/c++/14.2.1/bits/stl_tempbuf.h \
+ /usr/include/c++/14.2.1/bits/stl_raw_storage_iter.h \
+ /usr/include/c++/14.2.1/bits/align.h \
+ /usr/include/c++/14.2.1/bits/unique_ptr.h \
+ /usr/include/c++/14.2.1/bits/shared_ptr.h \
+ /usr/include/c++/14.2.1/bits/shared_ptr_base.h \
+ /usr/include/c++/14.2.1/bits/allocated_ptr.h \
+ /usr/include/c++/14.2.1/ext/concurrence.h \
+ /usr/include/c++/14.2.1/bits/shared_ptr_atomic.h \
+ /usr/include/c++/14.2.1/bits/atomic_base.h \
+ /usr/include/c++/14.2.1/bits/atomic_lockfree_defines.h \
+ /usr/include/c++/14.2.1/bits/atomic_wait.h \
+ /usr/include/c++/14.2.1/climits \
+ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/limits.h \
+ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/syslimits.h \
+ /usr/include/limits.h /usr/include/bits/posix1_lim.h \
+ /usr/include/bits/local_lim.h /usr/include/linux/limits.h \
+ /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h \
+ /usr/include/bits/uio_lim.h /usr/include/unistd.h \
+ /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
+ /usr/include/bits/confname.h /usr/include/bits/getopt_posix.h \
+ /usr/include/bits/getopt_core.h /usr/include/bits/unistd_ext.h \
+ /usr/include/linux/close_range.h /usr/include/syscall.h \
+ /usr/include/sys/syscall.h /usr/include/asm/unistd.h \
+ /usr/include/asm/unistd_64.h /usr/include/bits/syscall.h \
+ /usr/include/c++/14.2.1/bits/std_mutex.h \
+ /usr/include/c++/14.2.1/backward/auto_ptr.h \
+ /usr/include/c++/14.2.1/bits/ranges_uninitialized.h \
+ /usr/include/c++/14.2.1/bits/ranges_algobase.h \
+ /usr/include/c++/14.2.1/pstl/glue_memory_defs.h \
+ /usr/include/c++/14.2.1/pstl/execution_defs.h \
+ /usr/include/c++/14.2.1/mutex /usr/include/c++/14.2.1/bits/chrono.h \
+ /usr/include/c++/14.2.1/ratio /usr/include/c++/14.2.1/limits \
+ /usr/include/c++/14.2.1/ctime \
+ /usr/include/c++/14.2.1/bits/parse_numbers.h \
+ /usr/include/c++/14.2.1/bits/unique_lock.h /usr/include/c++/14.2.1/queue \
+ /usr/include/c++/14.2.1/deque /usr/include/c++/14.2.1/bits/stl_deque.h \
+ /usr/include/c++/14.2.1/bits/deque.tcc \
+ /usr/include/c++/14.2.1/bits/stl_heap.h \
+ /usr/include/c++/14.2.1/bits/stl_queue.h \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/joingame_state.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/network_component_interface.hpp \
  /usr/include/boost/asio/ip/tcp.hpp \
  /usr/include/boost/asio/detail/config.hpp /usr/include/boost/config.hpp \
  /usr/include/boost/config/user.hpp \
@@ -163,11 +218,7 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/config/compiler/gcc.hpp \
  /usr/include/boost/config/detail/select_stdlib_config.hpp \
  /usr/include/c++/14.2.1/version \
- /usr/include/boost/config/stdlib/libstdcpp3.hpp /usr/include/unistd.h \
- /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
- /usr/include/bits/confname.h /usr/include/bits/getopt_posix.h \
- /usr/include/bits/getopt_core.h /usr/include/bits/unistd_ext.h \
- /usr/include/linux/close_range.h \
+ /usr/include/boost/config/stdlib/libstdcpp3.hpp \
  /usr/include/boost/config/detail/select_platform_config.hpp \
  /usr/include/boost/config/platform/linux.hpp \
  /usr/include/boost/config/detail/posix_features.hpp \
@@ -195,38 +246,10 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/asio/detail/assert.hpp /usr/include/boost/assert.hpp \
  /usr/include/assert.h /usr/include/boost/asio/detail/atomic_count.hpp \
  /usr/include/c++/14.2.1/atomic \
- /usr/include/c++/14.2.1/bits/atomic_base.h \
- /usr/include/c++/14.2.1/bits/atomic_lockfree_defines.h \
- /usr/include/c++/14.2.1/bits/atomic_wait.h \
- /usr/include/c++/14.2.1/climits \
- /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/limits.h \
- /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/syslimits.h \
- /usr/include/limits.h /usr/include/bits/posix1_lim.h \
- /usr/include/bits/local_lim.h /usr/include/linux/limits.h \
- /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h \
- /usr/include/bits/uio_lim.h /usr/include/syscall.h \
- /usr/include/sys/syscall.h /usr/include/asm/unistd.h \
- /usr/include/asm/unistd_64.h /usr/include/bits/syscall.h \
- /usr/include/c++/14.2.1/bits/std_mutex.h \
  /usr/include/boost/asio/detail/cstddef.hpp \
  /usr/include/boost/asio/detail/executor_function.hpp \
  /usr/include/boost/asio/detail/handler_alloc_helpers.hpp \
- /usr/include/boost/asio/detail/memory.hpp /usr/include/c++/14.2.1/memory \
- /usr/include/c++/14.2.1/bits/stl_tempbuf.h \
- /usr/include/c++/14.2.1/bits/stl_raw_storage_iter.h \
- /usr/include/c++/14.2.1/bits/align.h \
- /usr/include/c++/14.2.1/bits/unique_ptr.h \
- /usr/include/c++/14.2.1/bits/shared_ptr.h \
- /usr/include/c++/14.2.1/bits/shared_ptr_base.h \
- /usr/include/c++/14.2.1/bits/allocated_ptr.h \
- /usr/include/c++/14.2.1/ext/aligned_buffer.h \
- /usr/include/c++/14.2.1/ext/concurrence.h \
- /usr/include/c++/14.2.1/bits/shared_ptr_atomic.h \
- /usr/include/c++/14.2.1/backward/auto_ptr.h \
- /usr/include/c++/14.2.1/bits/ranges_uninitialized.h \
- /usr/include/c++/14.2.1/bits/ranges_algobase.h \
- /usr/include/c++/14.2.1/pstl/glue_memory_defs.h \
- /usr/include/c++/14.2.1/pstl/execution_defs.h \
+ /usr/include/boost/asio/detail/memory.hpp \
  /usr/include/boost/asio/detail/cstdint.hpp \
  /usr/include/boost/asio/detail/throw_exception.hpp \
  /usr/include/boost/throw_exception.hpp \
@@ -249,15 +272,6 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/asio/associated_allocator.hpp \
  /usr/include/boost/asio/associator.hpp \
  /usr/include/boost/asio/detail/functional.hpp \
- /usr/include/c++/14.2.1/functional \
- /usr/include/c++/14.2.1/bits/std_function.h \
- /usr/include/c++/14.2.1/unordered_map \
- /usr/include/c++/14.2.1/bits/unordered_map.h \
- /usr/include/c++/14.2.1/bits/hashtable.h \
- /usr/include/c++/14.2.1/bits/hashtable_policy.h \
- /usr/include/c++/14.2.1/bits/enable_special_members.h \
- /usr/include/c++/14.2.1/bits/node_handle.h \
- /usr/include/c++/14.2.1/bits/erase_if.h /usr/include/c++/14.2.1/array \
  /usr/include/boost/asio/detail/non_const_lvalue.hpp \
  /usr/include/boost/asio/detail/scoped_ptr.hpp \
  /usr/include/boost/asio/execution/bad_executor.hpp \
@@ -302,11 +316,7 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/system/error_category.hpp \
  /usr/include/boost/system/detail/error_category_impl.hpp \
  /usr/include/boost/system/detail/std_category_impl.hpp \
- /usr/include/boost/system/detail/mutex.hpp /usr/include/c++/14.2.1/mutex \
- /usr/include/c++/14.2.1/bits/chrono.h /usr/include/c++/14.2.1/ratio \
- /usr/include/c++/14.2.1/limits /usr/include/c++/14.2.1/ctime \
- /usr/include/c++/14.2.1/bits/parse_numbers.h \
- /usr/include/c++/14.2.1/bits/unique_lock.h \
+ /usr/include/boost/system/detail/mutex.hpp \
  /usr/include/boost/system/error_condition.hpp \
  /usr/include/boost/system/errc.hpp \
  /usr/include/boost/system/generic_category.hpp \
@@ -360,7 +370,6 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/asio/detail/chrono.hpp /usr/include/c++/14.2.1/chrono \
  /usr/include/c++/14.2.1/bits/stl_algo.h \
  /usr/include/c++/14.2.1/bits/algorithmfwd.h \
- /usr/include/c++/14.2.1/bits/stl_heap.h \
  /usr/include/c++/14.2.1/bits/uniform_int_dist.h \
  /usr/include/c++/14.2.1/bits/chrono_io.h /usr/include/c++/14.2.1/iomanip \
  /usr/include/c++/14.2.1/locale \
@@ -834,15 +843,8 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/asio/detail/resolver_service_base.hpp \
  /usr/include/boost/asio/detail/impl/resolver_service_base.ipp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/states.hpp \
- /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/events.hpp \
- /usr/include/c++/14.2.1/map /usr/include/c++/14.2.1/bits/stl_tree.h \
- /usr/include/c++/14.2.1/bits/stl_map.h \
- /usr/include/c++/14.2.1/bits/stl_multimap.h \
- /usr/include/c++/14.2.1/queue /usr/include/c++/14.2.1/deque \
- /usr/include/c++/14.2.1/bits/stl_deque.h \
- /usr/include/c++/14.2.1/bits/deque.tcc \
- /usr/include/c++/14.2.1/bits/stl_queue.h \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/sessiontype.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/judge_state.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/network/client.hpp \
  /usr/include/boost/asio/local/stream_protocol.hpp \
  /usr/include/boost/asio/local/basic_endpoint.hpp \
@@ -851,6 +853,7 @@ CMakeFiles/apples2apples.dir/src/player.cpp.o: \
  /usr/include/boost/asio/streambuf.hpp \
  /usr/include/boost/asio/basic_streambuf.hpp \
  /usr/include/boost/asio/basic_streambuf_fwd.hpp \
+ /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/play_state.hpp \
  /home/wiiggee1/Desktop/School/homeexam_d7032e/./include/player.hpp \
  /usr/include/c++/14.2.1/condition_variable \
  /usr/include/c++/14.2.1/stop_token \

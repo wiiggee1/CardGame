@@ -8,7 +8,7 @@
 namespace Core {
     namespace Gameplay{
        
-        class JoinGameState : public GameState{
+        class JoinGameState : public Core::Gameplay::GameState{
              public:
 
                 JoinGameState(const JoinGameState&) = delete; // remove copy constructor.
@@ -29,7 +29,7 @@ namespace Core {
                 }
 
                 void idle_state() override;
-                void on_event(Context *context, Event event) override;
+                void on_event(Core::Gameplay::Context *context, Event event) override;
                 bool enough_players();
 
             private:

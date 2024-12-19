@@ -57,8 +57,10 @@ namespace Core {
             Game::getGameState().player_data[client_id] = GameData{false, false, 0, 0};
 
             //Game::getEventHandler()->push_event(Gameplay::Event::PlayerJoined);            
-            Game::getEventHandler()->store_eventmessage(Gameplay::Event::PlayerJoined, Network::DontCare());            
             std::cout << "Number of connected Clients: " << clients.size() << std::endl;
+            Game::getEventHandler()->store_eventmessage(Gameplay::Event::PlayerJoined, Network::DontCare());            
+            //Game::getEventHandler()->trigger_event(Gameplay::Event::PlayerJoined);            
+             
         });
 
         Game::getEventHandler()->add_callback(Gameplay::Event::PlayerJoined, [this](){
@@ -67,12 +69,30 @@ namespace Core {
         });
 
         Game::getEventHandler()->add_callback(Gameplay::Event::GameReady, [this](){
-            Game::getEventHandler()->pop_eventmessage();
+            std::cout << "GameReady Event - executing loadgame_request!" << std::endl;
+            //Game::getEventHandler()->pop_eventmessage();
             loadgame_request();
         });
 
         Game::getEventHandler()->add_callback(Gameplay::Event::CardRequest, [this](){
-            card_request_event(); 
+            std::cout << "Trying to execute: 'card_request_event()'" << std::endl;            
+            auto [event, message] = Game::getEventHandler()->get_eventmessage();
+            card_request_event(message); 
+            std::cout << "Successfully executed: 'card_request_event()'" << std::endl;            
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::SynchronizeGame, [this](){
+            synchronize_game(); 
+        });
+
+        Game::getEventHandler()->add_callback(Gameplay::Event::GameStarted, [this](){
+            // pop or process event msg here...
+            auto [event, message] = Game::getEventHandler()->get_eventmessage();
+            std::cout << "GameStarted Event - executing: 'startgame_message()'" << std::endl;
+            startgame_message();
+            std::cout << "Successfully - executed: 'startgame_message()'" << std::endl;
+            
+            //server->get_target_client(request_id)->write_to_client(byte_msg);
         });
 
         Game::getEventHandler()->add_callback(Gameplay::Event::CardPlayed, [this](){
@@ -80,20 +100,21 @@ namespace Core {
         });
     }
 
-    void Host::card_request_event(){
-        auto [event, message] = Game::getEventHandler()->get_eventmessage();
+    void Host::card_request_event(Core::Network::Message message){
         auto request_id = message.id;
         std::string card_amount = message.payload;
-        std::cout << "Received message.payload: " << card_amount << std::endl;
+        //std::cout << "Received message.payload: " << card_amount << std::endl;
                 
         int requested_card_amount = std::stoi(message.payload);
-        std::cout << "Player requested: " << requested_card_amount << "cards." << std::endl;
+        //std::cout << "Player requested: " << requested_card_amount << " cards." << std::endl;
                 
         auto [red_cards, green_cards] = get_cards();
-        std::cout << "Size of red cards deck: " << red_cards.size() << std::endl;
-                
+        //std::cout << "Size of red cards deck: " << red_cards.size() << std::endl;
+               
+        //shuffle_cards();
+
         deal_cards(request_id, requested_card_amount); 
-        std::cout << "Size of red cards deck after dealing cards: " << red_cards.size() << std::endl; 
+        //std::cout << "Size of red cards deck after dealing cards: " << red_cards.size() << std::endl; 
     }
 
     void Host::card_played_event(){
@@ -109,7 +130,7 @@ namespace Core {
 
         if (get_cardplayed_count() == expected_played_cards){
             auto played_cards = get_round_deck();
-            auto cards_payload = Network::join_strings(played_cards, ',');
+            auto cards_payload = Network::join_strings(played_cards, '/');
             auto msg = Network::create_message(Network::MessageType::Request, server->get_server_id(), Network::RPCType::Vote, cards_payload); 
         }
     }
@@ -121,12 +142,14 @@ namespace Core {
         int num_clients = (int)this->client_count;
         auto server = get_network_as<Network::Server>();        
         auto sender_id = server->get_server_id();
-        //auto total_players = num_clients + game_rules.num_bots;
-        
+        auto total_players = get_client_count() + game_rules.num_bots;
 
         if (num_clients == game_rules.expected_players){
             //startgame_message();          
-            Game::getEventHandler()->store_eventmessage(Gameplay::Event::GameReady, Network::DontCare());
+            //std::cout << "Trying to invoke GameReady Event!" << std::endl;
+            //Game::getEventHandler()->store_eventmessage(Gameplay::Event::GameReady, Network::DontCare());
+            Game::getEventHandler()->trigger_event(Gameplay::Event::GameReady);
+            
         }else {
             // Send update of count to Clients
             auto update_msg = Network::create_message(Network::MessageType::Response, sender_id, Network::RPCType::NewConnection, std::to_string(num_clients));
@@ -145,6 +168,7 @@ namespace Core {
     }
 
     void Host::deal_cards(unsigned short request_id, int request_amount){
+        std::cout << "Inside Host::deal_cards() logic!" << std::endl;
         
         auto server = get_network_as<Network::Server>();
         auto sender_id = server->get_server_id();
@@ -156,11 +180,13 @@ namespace Core {
             cards_to_send.push_back(card);
         }
         
-        auto response_payload = Network::join_strings(cards_to_send, ',');
-        std::cout << "In 'deal_cards' logic, cards to send as payload: " << response_payload << std::endl;
+        auto response_payload = Network::join_strings(cards_to_send, '/');
+        //std::cout << "In 'deal_cards' logic, cards to send as payload: " << response_payload << std::endl;
         auto response_msg = Network::create_message(Network::MessageType::Response, sender_id, Network::RPCType::DealCard, response_payload);
         auto byte_msg = Network::serialize_message(response_msg);
         server->get_target_client(request_id)->write_to_client(byte_msg);
+        std::cout << "In 'deal_cards' logic - Successful! " << std::endl;
+        
     }
 
     std::string Host::take_card(CardType card_type){
@@ -184,6 +210,8 @@ namespace Core {
     }
 
     void Host::loadgame_request(){
+        std::cout << "Inside loadgame_request()!" << std::endl;
+        
         auto server = this->get_network_as<Network::Server>();
         std::string visable_round_card = take_card(CardType::GREEN);
         auto msg = Network::create_message(
@@ -196,35 +224,52 @@ namespace Core {
         for(auto& client : server->get_clients()){
             client->write_to_client(byte_message);
         }
+        std::cout << "Inside loadgame_request() - Successful" << std::endl;
+        
+    }
+
+    void Host::synchronize_game(){
+        std::cout << "Starting Loading and Synchronizing of the Game!" << std::endl;
     }
 
     void Host::startgame_message(){
+        std::cout << "Inside Start game message logic!" << std::endl;
+        
         pick_judge();
         
         auto server = this->get_network_as<Network::Server>();
         std::string judge_payload = Gameplay::StateTypeToString(Gameplay::StateTypes::Judge);
-        
+        std::string playing_payload = Gameplay::StateTypeToString(Gameplay::StateTypes::Playing);
+
         auto judge_msg = Network::create_message(
-                Network::MessageType::Request,
+                Network::MessageType::Response,
                 server->get_server_id(),
                 Network::RPCType::StartGame, 
                 judge_payload);
 
-        auto nojudge_msg = Network::create_message(
-                Network::MessageType::Request,
+        auto playing_msg = Network::create_message(
+                Network::MessageType::Response,
                 server->get_server_id(),
                 Network::RPCType::StartGame, 
-                "");
+                playing_payload);
 
         for(auto& client: server->get_clients()){
-            if (this->judge_idx_iter->get()->get_id() == client->get_id()){
+            //std::cout << "Inside Start game message logic and in the for loop!" << std::endl;
+            //std::cout << "client id: " << client->get_id() << std::endl;
+            //std::cout << "judge_idx_iter -> client id: " << (*judge_idx_iter) << std::endl;
+             
+            if (client->get_id() == (*this->judge_idx_iter)->get_id()){
+                std::cout << "Found Judge index iterator ID" << std::endl;
                 auto byte_message = Network::serialize_message(judge_msg); 
                 client->write_to_client(byte_message);
             }else {
-                auto byte_message = Network::serialize_message(nojudge_msg); 
+                std::cout << "In else branch for sending 'Playing' start state!" << std::endl;
+                auto byte_message = Network::serialize_message(playing_msg); 
                 client->write_to_client(byte_message);
             }
+
         }
+        std::cout << "Inside Start game message logic, successfully ran all!" << std::endl;
 
         //update_judge();
     }
@@ -247,8 +292,11 @@ namespace Core {
         // 1. Pick randomized judge. 
         // 2. Update the judge_ptr_idx iterator position
         // 3. After sending, update the judge_ptr_idx for the next upcoming round.
+        
+        std::cout << "Executing: 'pick_judge'!" << std::endl;
+        
         auto server = this->get_network_as<Network::Server>();
-        auto clients = server->get_clients();
+        auto& clients = server->get_clients();
         std::vector<int> range_vec(clients.size());
         std::iota(range_vec.begin(), range_vec.end(), 0);
          
@@ -257,8 +305,18 @@ namespace Core {
         std::uniform_int_distribution<int> distribution(0, clients.size() - 1);
         
         int iterator_offset = distribution(generator);
-        auto judge_iterator = clients.begin() + iterator_offset;
-        this->judge_idx_iter = judge_iterator;
+        //std::cout << "iterator offset: " << iterator_offset << std::endl;
+        auto jdg_idx = clients.begin() + iterator_offset;
+        //std::cout << "jdg_idx client id: " << (*jdg_idx)->get_id() << std::endl;
+        this->judge_idx_iter = clients.begin() + iterator_offset;
+    
+        /*
+        if (clients.size() == 1){
+            this->judge_idx_iter = clients.begin();
+        }else {
+            this->judge_idx_iter = clients.begin() + iterator_offset;
+        }
+        */
     }
 
     void Host::update_judge(){

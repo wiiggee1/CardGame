@@ -28,6 +28,23 @@ namespace Core {
             CardRequest,
         };
 
+        constexpr const char* EventToString(Event event_type){
+            switch (event_type) {
+                case Core::Gameplay::Event::UserInput: return "UserInput";
+                case Core::Gameplay::Event::NetworkMessage: return "NetworkMessage";
+                case Core::Gameplay::Event::PlayerJoined: return "PlayerJoined";
+                case Core::Gameplay::Event::GameStarted: return "GameStarted";
+                case Core::Gameplay::Event::NextRound: return "NextRound";
+                case Core::Gameplay::Event::GameReady: return "GameReady";
+                case Core::Gameplay::Event::SynchronizeGame: return "SynchronizeGame";
+                case Core::Gameplay::Event::CardPlayed: return "CardPlayed";
+                case Core::Gameplay::Event::CardReceived: return "CardReceived";
+                case Core::Gameplay::Event::StartVote: return "StartVote";
+                case Core::Gameplay::Event::JudgeVoted: return "JudgeVoted";
+                case Core::Gameplay::Event::CardRequest: return "CardRequest";
+            }
+        };
+
         class Context;
 
         class EventHandler {
