@@ -56,10 +56,10 @@ pub const GameConfig = struct {
             break :exist_blk false; 
         };
 
-        std.debug.print("field_exist block = {}\n", .{field_exist}); 
+        // std.debug.print("field_exist block = {}\n", .{field_exist}); 
         if (!field_exist) return ArgParsingError.ArgNotValidConfigOption; 
 
-        if (self.hosting == false and (std.mem.eql(u8, any[0], "num_player") or std.mem.eql(u8, any[0], "num_bots"))){
+        if (self.hosting == false and (std.mem.eql(u8, any[0], "num_players") or std.mem.eql(u8, any[0], "num_bots"))){
             return ArgParsingError.NeedToBeHost; 
         }
                 
@@ -108,15 +108,31 @@ pub const GameConfig = struct {
         defer allocator.free(self.id);
     }
 
+    pub fn print(self: Self) !void {
+        const stdout = std.io.getStdOut().writer(); 
+        const fields = @typeInfo(@TypeOf(self)).@"struct".fields;
+        try stdout.print("{s:>5}\n", .{"GameConfig:"}); 
+        inline for (fields) |field| {
+            const print_format = "\t{s:<15}: " ++ switch (field.type) {
+                []u8, []const u8 => "{s}\n",
+                ?[]const u8 => "{?s}\n",
+                bool => "{}\n",
+                ?u8, ?u16 => "{?d}\n",
+                else => "{any}\n",
+            }; 
+            try stdout.print(print_format, .{field.name, @field(self, field.name)});
+        }
+    }
+
     fn help_option() !void {
         const stdout = std.io.getStdOut().writer(); 
         try stdout.print("Usage: game setup [options]\n", .{});
-        try stdout.print("  --help\n", .{});
-        try stdout.print("  --hosting <y/n>\n", .{});
-        try stdout.print("  --num_players <int>      Valid number is 1-8+\n", .{});
-        try stdout.print("  --id <str>\n", .{});
-        try stdout.print("  --ip\n", .{});
-        try stdout.print("  --port\n", .{});
+        try stdout.print("\t--help\n", .{});
+        try stdout.print("\t--hosting <y/n>\n", .{});
+        try stdout.print("\t--num_players <int>      Valid number is 1-8+\n", .{});
+        try stdout.print("\t--id <str>\n", .{});
+        try stdout.print("\t--ip\n", .{});
+        try stdout.print("\t--port\n", .{});
     }
 
     pub fn parse_args(allocator: std.mem.Allocator) ArgParsingError!Self {
@@ -148,6 +164,9 @@ pub const GameConfig = struct {
                 std.mem.eql(u8, arg, "-h") or 
                 std.mem.eql(u8, arg, "help")) {
                 try help_option(); 
+                allocator.free(env_user); 
+
+                break; 
             }
             
             try stdout.print("arg value: {s}\n", .{arg}); 
@@ -180,6 +199,7 @@ pub const GameConfig = struct {
         }
 
         game_config.update_config(); 
+        try game_config.print();
 
         return game_config; 
     }
@@ -233,6 +253,32 @@ pub const GameConfig = struct {
         }
     }
 };
+
+test "argparsing" {
+    const ArgPair = struct {[]const u8, []const u8};
+    const allocator = std.testing.allocator;
+
+    var game_conf_failing = GameConfig{
+        .hosting = false,
+        .id = try allocator.dupe(u8, "my_username"),
+    };
+    defer game_conf_failing.deinit(allocator); 
+     
+    const argpairs: []const ArgPair = &.{
+        .{"num_players", "2"},
+        .{"num_bots", "2"},
+        .{"num_botz", "1337"},
+        .{"random_flag", "123"},
+    }; 
+    const expected_err = GameConfig.ArgParsingError.NeedToBeHost; 
+    try std.testing.expectError(expected_err, game_conf_failing.check_parsing(argpairs[0])); 
+    try std.testing.expectError(expected_err, game_conf_failing.check_parsing(argpairs[1])); 
+    
+    const expected_err2 = GameConfig.ArgParsingError.ArgNotValidConfigOption; 
+    try std.testing.expectError(expected_err2, game_conf_failing.check_parsing(argpairs[2])); 
+    try std.testing.expectError(expected_err2, game_conf_failing.check_parsing(argpairs[3])); 
+
+}
 
 
 
