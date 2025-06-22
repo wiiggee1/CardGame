@@ -1,13 +1,26 @@
 const std = @import("std");
 
 pub const Player = struct {
-    id: u8,
-    name: []const u8,
+    id: ?u16,
+    name: ?[]const u8,
     red_cards: ?std.ArrayList([]const u8) = null,
     green_cards: ?std.ArrayList([]const u8) = null,
     
     // The play fn pointer, is the 'behavioral functionality'.
     // play: *const fn(args: anytype) void, 
+
+    pub fn new(id: ?u16, name: ?[]const u8, allocator: std.mem.Allocator) Player {
+        return Player{
+            .id = id,
+            .name = name,
+            .allocator = allocator, 
+        }; 
+    }
+
+    pub fn add_card(self: *Player, card: []const u8) !void {
+        _ = self; 
+        _ = card; 
+    }
 };
 
 pub const PlayerManager = struct {

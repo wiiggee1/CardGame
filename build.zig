@@ -87,6 +87,16 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .optimize = optimize, 
             })},
+            .{.name = "events", .module = b.createModule(.{
+                .root_source_file = b.path("src/events.zig"),
+                .target = target,
+                .optimize = optimize, 
+            })},
+            .{.name = "task_scheduler", .module = b.createModule(.{
+                .root_source_file = b.path("src/task_scheduler.zig"),
+                .target = target,
+                .optimize = optimize, 
+            })},
         }
     });
         

@@ -8,10 +8,10 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit(); 
 
-    var args = try GameConfig.parse_args(allocator);
-    defer args.deinit(allocator); // This would free the allocated `id` field. 
+    var game_config = try GameConfig.parse_args(allocator);
+    defer game_config.deinit(allocator); // This would free the allocated `id` field. 
+    try game_config.print();
 
-    std.debug.print("GameConfig: {any}\n", .{args});
     // std.debug.print("Args received: hosting={}, id={s}, ip={s}, num_bots={d}, num_player={d}, port={d}\n", .{ args.hosting, args.id, args.ip, args.num_bots, args.num_player, args.port });
     
     // var game = try Game.init(allocator, args);
