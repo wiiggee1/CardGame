@@ -1,14 +1,72 @@
+//! The cli.zig is a module containing the game config.
+//! Which is the arguments passed to the command-line-interface, 
+//! whenever executing the game. 
+//! ------------------------------------
 const std = @import("std");
 const server = std.net.Server;
 const address = std.net.Address;
 const ArgIterator = std.process.ArgIterator;
 
+const PlayerManager = @import("player.zig").PlayerManager;
+const Player = @import("player.zig").Player;
+const ServerInstance = @import("network/server.zig").ServerInstance;
+const ClientInstance = @import("network/client.zig").ClientInstance;
+
+
+pub const SessionType = enum {
+    /// A `Host` SessionType would handle a container of `Player`
+    /// pointers. Its responsibility is to track the global gamestate,
+    /// and act as the intermediate server between the client (players).
+    /// The Host is tightly coupled with the Server. 
+    Host, 
+    /// A `Client` is the participant `Player` that is attending the game. 
+    /// The Client is coupled with the client-socket. 
+    Client,
+
+    /// As of now, the only valid cast is from GameConfig → SessionType
+    pub fn try_from(value: anytype) !SessionType{
+        if(@TypeOf(value) != GameConfig){
+            return error.OnlyGameConfigTypeSupported;
+            // @compileError("Converting to SessionType require type to be 'GameConfig', got: " ++ @typeName(@TypeOf(value))); 
+        }
+
+        const is_hosting = @field(@as(GameConfig, value), "hosting");
+        if(is_hosting) return SessionType.Host else return SessionType.Client; 
+    }
+};
+
+pub const Session = union(SessionType) {
+    Host: struct {players: ?PlayerManager, net: ServerInstance}, 
+    Client: struct {player: ?Player, net: ClientInstance},
+
+    /// Creating a new `Host` or `Client` Session, is defined based on the 
+    /// given `GameConfig`. It maps from: GameConfig → SessionType → Session
+    pub fn create(config: GameConfig, allocator: std.mem.Allocator) !Session{
+        const session_kind = try SessionType.try_from(config);
+        switch (session_kind) {
+            .Host => Session{.players = PlayerManager.init(allocator), .net = ServerInstance{.id = 1}},
+            .Client => {
+                const id = config.port.?; 
+                const name = config.id.?;
+                return Session{.player = Player.new(id, name, allocator)}; 
+            },
+        }
+    }
+
+    pub fn get_sessiontype(self: Session) SessionType {
+        switch (self) {
+            .Host => return SessionType.Host,
+            .Client => return SessionType.Client,
+        }
+    }
+}; 
+
 /// This will provide config options related to the game.
 /// It also handles parsing of the arguments passed when executing the game file. 
 pub const GameConfig = struct {
     const Self = @This(); // returns the type of the inner most struct.
-    const DEFAULT_IP: []const u8 = "127.0.0.1"; 
-    const DEFAULT_PORT: u16 = 0; 
+    pub const DEFAULT_IP: []const u8 = "127.0.0.1"; 
+    pub const DEFAULT_PORT: u16 = 0; 
 
     hosting: bool = false,
     /// num_player, option is only valid if you are the host of the game. 
@@ -19,7 +77,7 @@ pub const GameConfig = struct {
     /// done automatically, by checking if the `num_player` is within 
     /// 4-10 players. Else we add the difference as bots. 
     num_bots: ?u8 = null,
-    id: []u8,
+    id: ?[]u8 = null,
     ip: ?[]const u8 = null,
     port: ?u16 = null, // 2048
 
@@ -32,6 +90,14 @@ pub const GameConfig = struct {
         FlagWithEmptyValue,
     } || std.fmt.ParseIntError || std.process.GetEnvMapError || std.io.AnyWriter.Error;
     
+    pub const default: GameConfig = defaults: {
+        break :defaults GameConfig{
+            .hosting = false, 
+            .ip = "127.0.0.1",
+            .port = "2048",
+        }; 
+    };
+
     /// Checking if parsing is valid, if not it will error. 
     fn check_parsing(self: Self, any: anytype) ArgParsingError!void {
         if(@typeInfo(@TypeOf(any)).@"struct".is_tuple == false){
@@ -80,6 +146,8 @@ pub const GameConfig = struct {
         inline for (config_fields) |field| {
             const FieldType: type, const field_name = type_blk: {
                 const field_info = @typeInfo(field.type); 
+                
+                // std.debug.print("Received field type: {any}\n", .{field_info});
                 if(field_info == .optional){
                     break :type_blk .{field_info.optional.child, field.name};
                 }else {
@@ -94,7 +162,6 @@ pub const GameConfig = struct {
                     @field(self, field_name) = try std.fmt.parseUnsigned(FieldType, flag_value, 10); 
                 }else if (FieldType == []u8){
                     if (std.mem.eql(u8, flag_name, "user") or std.mem.eql(u8, flag_name, "id") or std.mem.eql(u8, flag_name, "username")){
-                        allocator.free(self.id);
                         self.id = try allocator.dupe(u8, flag_value);
                     }
                 }else {
@@ -105,17 +172,22 @@ pub const GameConfig = struct {
     }
 
     pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
-        defer allocator.free(self.id);
+        if(self.id != null){
+            defer allocator.free(self.id.?);
+        }
     }
 
     pub fn print(self: Self) !void {
         const stdout = std.io.getStdOut().writer(); 
+        // const stderr = std.io.getStdErr().writer(); // Use stderr, for error message during debugging and testing. 
+        // const stdout = std.io.getStdErr().writer(); // Use stderr, for error message during debugging and testing. 
+        
         const fields = @typeInfo(@TypeOf(self)).@"struct".fields;
         try stdout.print("{s:>5}\n", .{"GameConfig:"}); 
         inline for (fields) |field| {
             const print_format = "\t{s:<15}: " ++ switch (field.type) {
                 []u8, []const u8 => "{s}\n",
-                ?[]const u8 => "{?s}\n",
+                ?[]const u8, ?[]u8 => "{?s}\n",
                 bool => "{}\n",
                 ?u8, ?u16 => "{?d}\n",
                 else => "{any}\n",
@@ -139,19 +211,16 @@ pub const GameConfig = struct {
         const stdout = std.io.getStdOut().writer(); 
         var args = try std.process.ArgIterator.initWithAllocator(allocator);
         defer args.deinit();
-
         _ = args.skip(); // First argument is the executable path to file. 
 
-        // std.os.linux.termio{}
-
-        // We set the user id initially by searching the env `$USER` on the OS.
-        const env_user = try std.process.getEnvVarOwned(allocator, "USER"); //WARN: - Caller owns the returned slice, and need to free it! 
-        std.debug.print("Found user id: {s} with type: {}\n", .{env_user, @TypeOf(env_user)}); 
-
         var game_config = GameConfig{
-            .id = env_user,
+            // .id = my_username,
             // .ip = "127.0.0.1", 
         }; 
+        
+        errdefer game_config.deinit(allocator); // if we get an error, we free resources.
+        // if (game_config.id != null and game_config.id.? != 0){}
+        // std.os.linux.termio{}
          
         while(args.next()) |arg| {
             if (arg.len < 2){
@@ -164,7 +233,7 @@ pub const GameConfig = struct {
                 std.mem.eql(u8, arg, "-h") or 
                 std.mem.eql(u8, arg, "help")) {
                 try help_option(); 
-                allocator.free(env_user); 
+                // allocator.free(env_user); 
 
                 break; 
             }
@@ -178,7 +247,9 @@ pub const GameConfig = struct {
                         const rhs_value = split.peek();
                         const flag_name = std.mem.trim(u8, lhs_flag, "--");
                         
-                        if (rhs_value) |flag_value| break :val_blk .{flag_name, flag_value};
+                        if (rhs_value) |flag_value| {
+                            break :val_blk .{flag_name, flag_value};
+                        }
                     }else {
                         if(args.next()) |flag_val| {
                             try stdout.print("Found '{s}' flag with associated value: {s}\n", .{arg, flag_val});
@@ -198,8 +269,10 @@ pub const GameConfig = struct {
             if (std.ascii.eqlIgnoreCase(arg, "--hosting")){}
         }
 
-        game_config.update_config(); 
+        try game_config.update_config(allocator); 
         try game_config.print();
+        // const session_tag = try SessionType.try_from(game_config); 
+        // try stdout.print("GameConfig and SessionType.try_from gave: {s}\n", .{@tagName(session_tag)});
 
         return game_config; 
     }
@@ -236,20 +309,26 @@ pub const GameConfig = struct {
 
     /// This method, should handle missing config fields, by setting them to their default values. 
     /// Or for the case of `num_bots` this is calculated taking the difference. 
-    fn update_config(self: *Self) void {
+    fn update_config(self: *Self, allocator: std.mem.Allocator) !void {
         //Set default values below: 
+
+        if(self.id == null) {
+            // We set the user id initially by searching the env `$USER` on the OS.
+            const env_user = try std.process.getEnvVarOwned(allocator, "USER"); //WARN: - Caller owns the returned slice! 
+            std.debug.print("Found env variable $USER : {s} as new id.\n", .{env_user}); 
+            self.id = env_user; 
+        }
+
         if(self.ip == null) {
             self.ip = GameConfig.DEFAULT_IP; 
+        }else {
+            if (std.mem.eql(u8, self.ip.?, "localhost")){
+                self.ip = GameConfig.DEFAULT_IP; 
+            }
         }
         
         if(self.port == null){
             self.port = GameConfig.DEFAULT_PORT;
-        }
-        if (self.num_players) |num_players|{
-            if (num_players < 4){
-                const diff: u8 = 4 - num_players; 
-                if (diff == 0) self.num_bots = 0 else self.num_bots = diff; 
-            }
         }
     }
 };
