@@ -22,13 +22,13 @@ pub fn build(b: *std.Build) void {
     const home_directory = std.process.getEnvVarOwned(b.allocator, "HOME") catch "";
     _ = home_directory; 
 
-    const lib_mod = b.createModule(.{
+    // const lib_mod = b.createModule(.{
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+        // .root_source_file = b.path("src/root.zig"),
+        // .target = target,
+        // .optimize = optimize,
+    // });
 
     // We will also create a module for our other entry point, 'main.zig'.
     const exe_mod = b.createModule(.{
@@ -41,34 +41,50 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+
     // Modules can depend on one another using the `std.Build.Module.addImport` function.
     // This is what allows Zig source code to use `@import("foo")` where 'foo' is not a
     // file path. In this case, we set up `exe_mod` to import `lib_mod`.
-    exe_mod.addImport("CardGameZig", lib_mod);
+    // exe_mod.addImport("CardGameZig", lib_mod);
 
     // Now, we will create a static library based on the module we created above.
     // This creates a `std.Build.Step.Compile`, which is the build step responsible
     // for actually invoking the compiler.
-    const lib = b.addLibrary(.{
-        .linkage = .static,
-        .name = "CardGameZig",
-        .root_module = lib_mod,
-    });
+    // const lib = b.addLibrary(.{
+    //     .linkage = .static,
+    //     .name = "CardGameZig",
+    //     .root_module = lib_mod,
+    // });
 
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
-    b.installArtifact(lib);
+    // b.installArtifact(lib);
 
     const exe = b.addExecutable(.{
         .name = "CardGameZig",
         .root_module = exe_mod,
     });
 
+    // const settings_module = b.dependency("config", .{.target = target, .optimize = optimize}).module("config");
 
-    const game_mod  = b.addModule("game", .{
-        .root_source_file = b.path("src/game.zig"),
+    // const state = b.createModule(.{ .root_source_file = b.path("src/game_state/states.zig") });
+    // const event = b.createModule(.{ .root_source_file = b.path("src/game_state/events.zig") });
+    // const task_scheduler = b.createModule(.{ .root_source_file = b.path("src/game_state/task_scheduler.zig") });
+
+    const game_state_mod = b.addModule("game_state", .{
+        .root_source_file = b.path("src/game_state/game_state.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+
+    // "A module is a directory of files, along with a root source file that identifies
+    // the file referred to when the module is used with @import."
+
+    const settings_mod = b.addModule("settings", .{
+        .root_source_file = b.path("src/settings.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -77,27 +93,17 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .optimize = optimize, 
             })},
-            .{.name = "player", .module = b.createModule(.{
-                .root_source_file = b.path("src/player.zig"),
-                .target = target,
-                .optimize = optimize, 
-            })},
-            .{.name = "states", .module = b.createModule(.{
-                .root_source_file = b.path("src/states.zig"),
-                .target = target,
-                .optimize = optimize, 
-            })},
-            .{.name = "events", .module = b.createModule(.{
-                .root_source_file = b.path("src/events.zig"),
-                .target = target,
-                .optimize = optimize, 
-            })},
-            .{.name = "task_scheduler", .module = b.createModule(.{
-                .root_source_file = b.path("src/task_scheduler.zig"),
-                .target = target,
-                .optimize = optimize, 
-            })},
         }
+    });
+    
+    const game_mod  = b.addModule("game", .{
+        .root_source_file = b.path("src/game.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{.name = "settings", .module = settings_mod},
+            .{.name = "game_state", .module = game_state_mod},
+        },
     });
         
     const network_mod  = b.addModule("network", .{
@@ -122,6 +128,7 @@ pub fn build(b: *std.Build) void {
             })},
         }
     });
+
     exe.root_module.addImport("game", game_mod); 
     exe.root_module.addImport("network", network_mod); 
 
@@ -137,6 +144,7 @@ pub fn build(b: *std.Build) void {
     .name = "CardGameZig",
     .root_module = exe_mod,
     });
+    
 
     const check = b.step("check", "Check if 'CardGameZig' compiles");
     check.dependOn(&exe_check.step);
@@ -164,33 +172,54 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const game_testing = b.addTest(.{
-        .root_module = game_mod,
-    });
-
-    const run_game_testing = b.addRunArtifact(game_testing);
-    const game_test_step = b.step("test-game", "Unit testing for the game component");
-    game_test_step.dependOn(&run_game_testing.step); 
+    const test_filter = b.option([]const u8, "test-filter", "Filters for test");
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
-    const lib_unit_tests = b.addTest(.{
-        .root_module = lib_mod,
+    const unit_testing = b.addTest(.{
+        .name = "game-test",
+        .filters = if (test_filter) |filter| &.{filter} else &.{}, 
+        .root_source_file = b.path("src/game.zig"), // working
+        // .root_module = exe_mod,
+        // .root_module = b.createModule(.{
+        //         .root_source_file = b.path("src/game.zig"),
+        //         // .root_source_file = b.path("src/main.zig"),
+        //         .target = target,
+        //         .optimize = .Debug,
+        //         .strip = false,
+        //         .omit_frame_pointer = false,
+        //         .unwind_tables = .sync,
+        // }),
+        .test_runner = .{ .path = b.path("src/unit_testing.zig"), .mode = .simple},
     });
 
-    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
-
-    const exe_unit_tests = b.addTest(.{
-        .root_module = exe_mod,
+    const gamestate_testing = b.addTest(.{
+        .name = "gamestate-test",
+        .filters = if (test_filter) |filter| &.{filter} else &.{}, 
+        .root_source_file = b.path("src/game_state/game_state.zig"), // working
+        .test_runner = .{ .path = b.path("src/unit_testing.zig"), .mode = .simple},
     });
 
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+    // Add the imports that the game_mod is using to the test. 
+
+    // unit_testing.root_module.addImport("state", state);
+    // unit_testing.root_module.addImport("event", event);
+    // unit_testing.root_module.addImport("task_scheduler", task_scheduler);
+
+    // Working
+    unit_testing.root_module.addImport("settings", settings_mod);
+    unit_testing.root_module.addImport("game_state", game_state_mod);
+
+    const run_game_testing = b.addRunArtifact(unit_testing);
+    run_game_testing.has_side_effects = true; 
+    
+    const runstep_gamestep = b.addRunArtifact(gamestate_testing);
+    runstep_gamestep.has_side_effects = true; 
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
     // running the unit tests.
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_lib_unit_tests.step);
-    test_step.dependOn(&run_exe_unit_tests.step);
+    const test_step = b.step("test", "Run unit tests (test runner) for the Game");
     test_step.dependOn(&run_game_testing.step);
+    test_step.dependOn(&runstep_gamestep.step);
 }
