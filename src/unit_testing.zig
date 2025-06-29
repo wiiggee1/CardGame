@@ -12,11 +12,6 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-// const game = @import("game.zig");
-// const settings = @import("settings.zig");
-// const states = @import("game_state/states.zig");
-// const events = @import("game_state/events.zig");
-// const task_scheduler = @import("game_state/task_scheduler.zig");
 const logger = @import("log.zig");
 
 pub const std_options: std.Options = .{
@@ -28,7 +23,7 @@ const TestingError = error {
 } || std.fmt.ParseIntError || std.process.GetEnvMapError || std.io.AnyWriter.Error;
 
 
-pub const TestCase = struct{test_name: []const u8, metric: TestMetric, duration: ?i64, err_msg: ?TestingError};
+pub const TestCase = struct{test_name: []const u8, metric: TestMetric, duration: ?f32, err_msg: ?TestingError};
 
 pub const TestMetric = enum {
     passed,
@@ -48,7 +43,6 @@ pub const TestSummary = struct {
     total: usize = 0, 
     test_cases: std.ArrayList(TestCase), 
     module_name: ?[]const u8 = null, 
-
 
     fn showTestSummary(self: TestSummary, file_writer: std.fs.File.Writer, comptime format: []const u8) !void{
         const fields = @typeInfo(@TypeOf(self)).@"struct".fields;
@@ -84,8 +78,6 @@ pub const TestSummary = struct {
                     .total => {}, 
                 }
             }
-            // const print_format = "{s:<10}: " ++ switch (field.type) {
-            // try file_writer.print(metric_string, .{self});
         }
         try file_writer.print("\x1b[0m \n\n", .{}); 
      
@@ -115,6 +107,15 @@ pub const TestSummary = struct {
                 },
                 .total => {},
             }
+        }
+    }
+
+    pub fn showTestCoverage(coverage_map: std.StringHashMap(TestSummary), file_writer: std.fs.File.Writer) !void {
+        var iter = coverage_map.valueIterator();
+        while(iter.next()) |coverage| {
+            try coverage.showTestSummary(file_writer, ""); 
+            // try coverage.showTestSummary(stderr, module_name_header); 
+            try coverage.showAllTestCases(file_writer);
         }
     }
 
@@ -181,21 +182,39 @@ pub fn main() !void {
         return err;
     };
 
-    // std.posix.termios
-    // @cImport(@cInclude("ncurses_dll.h")) 
+    // var coverage = TestSummary{
+    //     .test_cases = std.ArrayList(TestCase).init(allocator),
+    // };
 
-    var coverage = TestSummary{.test_cases = std.ArrayList(TestCase).init(allocator)};
-    defer coverage.test_cases.deinit(); 
+    var coverage_map = std.StringHashMap(TestSummary).init(allocator);
+    // var module_coverage = std.ArrayList(TestSummary).init(allocator);
+    // try module_coverage.append(coverage); 
+    
+    defer {
+        // for (module_coverage.items) |mod| {
+        //     mod.test_cases.deinit();
+        //     mod.modules.deinit();
+        // }
+        // module_coverage.deinit();
+        var iter = coverage_map.valueIterator();
+        while(iter.next()) |item| {
+            item.test_cases.deinit();
+        }
+        coverage_map.deinit();
+    }
 
     const stderr = std.io.getStdErr().writer();
     try stderr.print("\n", .{});
     try stderr.print("\r\x1b[0K", .{}); // beginning of line and clear to end of line
 
     for (builtin.test_functions) |test_target| {
-        // std.debug.print("test_target: {}\n", .{test_target});
+        // std.debug.print("\ntest_target: {}\n\n", .{test_target});
+        std.debug.print("\ntest_target.name: {s}\n\n", .{test_target.name});
+        if(std.mem.endsWith(u8, test_target.name, ".test_0")) continue;
+        
         std.testing.allocator_instance = .{};
         var iter = std.mem.splitScalar(u8, test_target.name, '.'); 
-        
+
         const module_name: []const u8 = mod_blk: {
             const mod_name = iter.first(); 
             if (std.mem.eql(u8, mod_name, "game")){
@@ -211,28 +230,36 @@ pub fn main() !void {
             }
             break :mod_blk mod_name;
         };
-        
-        if (coverage.module_name == null){
-            coverage.module_name = module_name; 
+        const result = try coverage_map.getOrPut(module_name);
+        if(result.found_existing == false){
+            result.value_ptr.* = TestSummary{.test_cases = .init(allocator), .module_name = module_name}; 
         }
-        
-        if (iter.peek()) |peek_str| {
-           if (std.mem.eql(u8, peek_str, "test")){
-                _ = iter.next(); 
+
+        var coverage = coverage_map.getPtr(module_name) orelse @panic("Failed getting coverage pointer!");
+
+        const test_name: []const u8 = name_blk:{
+            while(iter.next()) |name| {
+                if(!std.mem.eql(u8, name, "test")) {
+                    continue;
+                }else {
+                    break; 
+                }
             }
-        }
-        const test_name = iter.next();
+            break :name_blk iter.next() orelse test_target.name;
+        };
 
-        const name_test = test_name orelse test_target.name; 
-        std.debug.print("Found Module name: {s} and test_function: {s}\n", .{module_name, name_test}); 
-
+        // const name_test = test_name orelse test_target.name; 
+        std.debug.print("Found Module name: {s} and test_function: {s}\n", .{module_name, test_name}); 
 
         if (std.mem.indexOf(u8, test_target.name, test_filter) == null) continue; 
          
-        const start = std.time.milliTimestamp();
+        // const now = try std.time.Instant.now();
+        // std.debug.print("Instant now: {}\n", .{now});
+
+        const start = std.time.microTimestamp();
         test_target.func() catch |err| {
             // try stderr.print("Test: {s} :\tFailed with error: {} ❌\n", .{test_target.name, err});
-            try coverage.test_cases.append(.{.test_name = name_test, .metric = .failed, .duration = null, .err_msg = err}); 
+            try coverage.test_cases.append(.{.test_name = test_name, .metric = .failed, .duration = null, .err_msg = err}); 
             coverage.failed += 1; 
             if (@errorReturnTrace()) |stack_trace| {
                 // std.builtin.StackTrace{}
@@ -241,11 +268,16 @@ pub fn main() !void {
             }
             continue;
         };
+        
+        // const end = std.time.milliTimestamp();
+        const end = std.time.microTimestamp();
+        const duration_micro: i64 = end - start; 
+        const duration_mili = 0.001 * @as(f32, @floatFromInt(duration_micro));
+        
+        // std.debug.print("numerator: {d:.5}, duration_micro: {d:.5}, duration_mili: {d:.5}\n", .{numerator, duration_micro, duration_mili});
 
-        const end = std.time.milliTimestamp();
-        const duration: i64 = end - start; 
         // try stderr.print("Test: {s} :\tPassed, duration: {d}ms ✅\n", .{test_target.name, duration}); 
-        try coverage.test_cases.append(.{.test_name = name_test, .metric = .passed, .duration = duration, .err_msg = null}); 
+        try coverage.test_cases.append(.{.test_name = test_name, .metric = .passed, .duration = duration_mili, .err_msg = null}); 
 
         if (std.testing.allocator_instance.deinit() == .leak){
             const func_addr = @intFromPtr(test_target.func);
@@ -254,15 +286,20 @@ pub fn main() !void {
             // std.debug.dumpStackPointerAddr(prefix: []const u8)
 
             // try stderr.print("\n\tTest: {s} :\tLeaked memory ⚠️\n", .{test_target.name}); 
-            try coverage.test_cases.append(.{.test_name = name_test, .metric = .leaked, .duration = duration, .err_msg = null}); 
+            try coverage.test_cases.append(.{.test_name = test_name, .metric = .leaked, .duration = duration_mili, .err_msg = null}); 
             coverage.leaked += 1; 
         }
         coverage.passed += 1; 
     }
-    coverage.total = coverage.passed + coverage.failed; 
-    try coverage.showTestSummary(stderr, ""); 
+    // coverage.*.total = coverage.passed + coverage.failed; 
+    var map_iter = coverage_map.valueIterator(); 
+    while(map_iter.next()) |coverage| {
+        coverage.total = coverage.failed + coverage.passed; 
+    }
+    try TestSummary.showTestCoverage(coverage_map, stderr);
+    // try coverage.showTestSummary(stderr, ""); 
     // try coverage.showTestSummary(stderr, module_name_header); 
-    try coverage.showAllTestCases(stderr);
+    // try coverage.showAllTestCases(stderr);
     
 }
 
