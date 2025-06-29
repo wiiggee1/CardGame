@@ -10,10 +10,12 @@ pub const Player = struct {
     // play: *const fn(args: anytype) void, 
 
     pub fn new(id: ?u16, name: ?[]const u8, allocator: std.mem.Allocator) Player {
+        
         return Player{
             .id = id,
             .name = name,
-            .allocator = allocator, 
+            .red_cards = std.ArrayList([]const u8).init(allocator), 
+            .green_cards = std.ArrayList([]const u8).init(allocator), 
         }; 
     }
 

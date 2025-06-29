@@ -7,59 +7,6 @@ const server = std.net.Server;
 const address = std.net.Address;
 const ArgIterator = std.process.ArgIterator;
 
-const PlayerManager = @import("player.zig").PlayerManager;
-const Player = @import("player.zig").Player;
-const ServerInstance = @import("network/server.zig").ServerInstance;
-const ClientInstance = @import("network/client.zig").ClientInstance;
-
-
-pub const SessionType = enum {
-    /// A `Host` SessionType would handle a container of `Player`
-    /// pointers. Its responsibility is to track the global gamestate,
-    /// and act as the intermediate server between the client (players).
-    /// The Host is tightly coupled with the Server. 
-    Host, 
-    /// A `Client` is the participant `Player` that is attending the game. 
-    /// The Client is coupled with the client-socket. 
-    Client,
-
-    /// As of now, the only valid cast is from GameConfig → SessionType
-    pub fn try_from(value: anytype) !SessionType{
-        if(@TypeOf(value) != GameConfig){
-            return error.OnlyGameConfigTypeSupported;
-            // @compileError("Converting to SessionType require type to be 'GameConfig', got: " ++ @typeName(@TypeOf(value))); 
-        }
-
-        const is_hosting = @field(@as(GameConfig, value), "hosting");
-        if(is_hosting) return SessionType.Host else return SessionType.Client; 
-    }
-};
-
-pub const Session = union(SessionType) {
-    Host: struct {players: ?PlayerManager, net: ServerInstance}, 
-    Client: struct {player: ?Player, net: ClientInstance},
-
-    /// Creating a new `Host` or `Client` Session, is defined based on the 
-    /// given `GameConfig`. It maps from: GameConfig → SessionType → Session
-    pub fn create(config: GameConfig, allocator: std.mem.Allocator) !Session{
-        const session_kind = try SessionType.try_from(config);
-        switch (session_kind) {
-            .Host => Session{.players = PlayerManager.init(allocator), .net = ServerInstance{.id = 1}},
-            .Client => {
-                const id = config.port.?; 
-                const name = config.id.?;
-                return Session{.player = Player.new(id, name, allocator)}; 
-            },
-        }
-    }
-
-    pub fn get_sessiontype(self: Session) SessionType {
-        switch (self) {
-            .Host => return SessionType.Host,
-            .Client => return SessionType.Client,
-        }
-    }
-}; 
 
 /// This will provide config options related to the game.
 /// It also handles parsing of the arguments passed when executing the game file. 
@@ -69,17 +16,33 @@ pub const GameConfig = struct {
     pub const DEFAULT_PORT: u16 = 0; 
 
     hosting: bool = false,
+    
     /// num_player, option is only valid if you are the host of the game. 
     /// Meaning `hosting` = true. 
     num_players: ?u8 = null,
+    
     /// num_bots, option is only valid if you are the host of the game. 
     /// Meaning `hosting` = true. Defining the number of bots, is usally 
     /// done automatically, by checking if the `num_player` is within 
     /// 4-10 players. Else we add the difference as bots. 
-    num_bots: ?u8 = null,
+    num_bots: u8 = 0,
+    
     id: ?[]u8 = null,
     ip: ?[]const u8 = null,
     port: ?u16 = null, // 2048
+
+    /// This field is dependent on the GameConfig instance.
+    /// -------------------------------------------------
+    /// It depend on the number of total players (num_players + num_bots).
+    /// You win the game according to the following cases: 
+    /// • 4 players → 8 green apples win. 
+    /// • 5 players → 7 green apples. 
+    /// • 6 players → 6 green apples. 
+    /// • 7 players → 5 green apples. 
+    /// • 8+ players → 4 green apples. 
+    /// -------------------------------------------------
+    points_to_win: ?u8 = null,
+
 
     const ArgParsingError = error {
         NeedToBeHost,
@@ -94,7 +57,8 @@ pub const GameConfig = struct {
         break :defaults GameConfig{
             .hosting = false, 
             .ip = "127.0.0.1",
-            .port = "2048",
+            .port = 2048,
+            .num_bots = 0,
         }; 
     };
 
@@ -177,13 +141,26 @@ pub const GameConfig = struct {
         }
     }
 
-    pub fn print(self: Self) !void {
-        const stdout = std.io.getStdOut().writer(); 
+    /// Prints out using stdout the GameConfig and its fields. 
+    /// However, using this in a test block, doesnt work with stdout. 
+    /// So if we pass the argument parameter `debug_log` as true. 
+    /// We would change from stdout filedescriptor to the 
+    /// std.log.default type instead. 
+    /// ---------------------------------------------
+    /// "Don't write to stdout if you are not the main application!"
+    /// https://github.com/ziglang/zig/issues/15091#issuecomment-1788192127
+    pub fn print(self: Self, debug_log: bool) !void {
+        // const stdout = std.io.getStdOut().writer(); 
         // const stderr = std.io.getStdErr().writer(); // Use stderr, for error message during debugging and testing. 
-        // const stdout = std.io.getStdErr().writer(); // Use stderr, for error message during debugging and testing. 
-        
         const fields = @typeInfo(@TypeOf(self)).@"struct".fields;
-        try stdout.print("{s:>5}\n", .{"GameConfig:"}); 
+        // try stdout.print("{s:>5}\n", .{"GameConfig:"}); 
+        if (debug_log) std.log.debug("{s:>5}\n", .{"GameConfig:"}) 
+        else try std.io.getStdErr().writer().print("{s:>5}\n", .{"GameConfig:"});
+
+        // std.fmt.format(writer: anytype, comptime fmt: []const u8, args: anytype)
+        // std.fmt.comptimePrint
+        
+
         inline for (fields) |field| {
             const print_format = "\t{s:<15}: " ++ switch (field.type) {
                 []u8, []const u8 => "{s}\n",
@@ -192,7 +169,11 @@ pub const GameConfig = struct {
                 ?u8, ?u16 => "{?d}\n",
                 else => "{any}\n",
             }; 
-            try stdout.print(print_format, .{field.name, @field(self, field.name)});
+
+            // if (debug_log) std.log.debug(print_format, .{field.name, @field(self, field.name)}) 
+            if (debug_log) std.log.scoped(.inner).debug(print_format, .{field.name, @field(self, field.name)}) 
+            else try std.io.getStdErr().writer().print(print_format, .{field.name, @field(self, field.name)});
+            // try stdout.print(print_format, .{field.name, @field(self, field.name)});
         }
     }
 
@@ -270,7 +251,7 @@ pub const GameConfig = struct {
         }
 
         try game_config.update_config(allocator); 
-        try game_config.print();
+        try game_config.print(true);
         // const session_tag = try SessionType.try_from(game_config); 
         // try stdout.print("GameConfig and SessionType.try_from gave: {s}\n", .{@tagName(session_tag)});
 
@@ -278,7 +259,7 @@ pub const GameConfig = struct {
     }
 
     //TODO: - Move this, so its not part of the `cli.zig` logic!!!!!!
-    pub fn create_socket() void {
+    pub fn create_socket() !void {
         const stdout = std.io.getStdOut().writer(); 
 
         // Setting the port to 0, means the OS will pick the port for us. 
@@ -309,13 +290,14 @@ pub const GameConfig = struct {
 
     /// This method, should handle missing config fields, by setting them to their default values. 
     /// Or for the case of `num_bots` this is calculated taking the difference. 
-    fn update_config(self: *Self, allocator: std.mem.Allocator) !void {
+    pub fn update_config(self: *Self, allocator: std.mem.Allocator) !void {
         //Set default values below: 
+        std.log.info("Trying to Update GameConfig Now!\n", .{}); 
 
-        if(self.id == null) {
+        if(self.id == null and self.hosting == false) {
             // We set the user id initially by searching the env `$USER` on the OS.
             const env_user = try std.process.getEnvVarOwned(allocator, "USER"); //WARN: - Caller owns the returned slice! 
-            std.debug.print("Found env variable $USER : {s} as new id.\n", .{env_user}); 
+            std.log.debug("Found env variable $USER : {s} as new id.\n", .{env_user}); 
             self.id = env_user; 
         }
 
@@ -330,7 +312,44 @@ pub const GameConfig = struct {
         if(self.port == null){
             self.port = GameConfig.DEFAULT_PORT;
         }
+
+        if (self.hosting == true){
+            try self.add_bots();
+            try self.apply_rules();
+        }
     }
+
+    fn add_bots(self: *Self) !void {
+        if (self.num_players) |num_players|{
+            if (num_players < 4){
+                const diff: u8 = 4 - num_players; // should not be negative, check if num_players is less than 3 or 4.  
+                const clamp_diff: u8 = std.math.clamp(diff, 0, 4);
+                std.log.debug("diff: {d} vs clamp diff: {d}\n", .{diff, clamp_diff}); 
+                if (clamp_diff == 0) self.num_bots = 0 else self.num_bots = clamp_diff; 
+            }
+        }else {
+            return error.NumberPlayersMissing; 
+        }
+    }
+
+    fn apply_rules(self: *Self) !void {
+        if (self.num_players != null){
+            const total_playing: u8 = self.num_players.? + self.num_bots;
+            self.points_to_win = switch (total_playing) {
+                0, 1, 2, 3 => return error.TooFewPlayers,
+                4 => 8,
+                5 => 7,
+                6 => 6,
+                7 => 5,
+                8...10 => 4,
+                else => return error.TooManyPlayers,
+            };
+
+        }else {
+            return error.ConfigMissingPlayerCount; 
+        }
+    }
+
 };
 
 test "argparsing" {

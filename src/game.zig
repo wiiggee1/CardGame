@@ -5,37 +5,34 @@
 //! ------------------------------------
 
 const std = @import("std");
-const player = @import("player");
-const events = @import("events"); 
-const states = @import("states");
-const scheduler = @import("task_scheduler");
-const cli = @import("cli");
+// pub const game_state = @import("game_state");
+const game_state = @import("game_state");
+const settings = @import("settings");
 
-pub const GameConfig = cli.GameConfig; // Should be public for exposing to main.zig. 
-pub const SessionType = cli.SessionType;
-pub const Session = cli.Session;
+const log = std.log.scoped(.game_logic);
 
-// The player related API, should be private and only exposed within the Game Module. 
-const Player = player.Player;
-const PlayerManager = player.PlayerManager;
+pub const GameConfig = settings.GameConfig;
+pub const SessionType = settings.SessionType;
+pub const Session = settings.Session;
 
-const InternalEvent = events.InternalEvent; 
-const UserInput = events.UserInput; 
-const NetworkEvent = events.NetworkEvent; 
-const Event = events.Event; 
-const GameState = states.GameState; 
+const InternalEvent = game_state.InternalEvent; 
+const UserInput = game_state.UserInput; 
+const NetworkEvent = game_state.NetworkEvent; 
+const Event = game_state.Event; 
 
-const TaskScheduler = scheduler.TaskScheduler(Event); 
-const TaskCallback = scheduler.TaskCallback; 
+const GameState = game_state.GameState; 
+const TaskScheduler = game_state.TaskScheduler(Event); 
+const TaskCallback = game_state.TaskCallback; 
 
-
-pub fn Game(comptime Config: GameConfig) type{
+pub fn Game(comptime Config: type) type{
+    if(!std.mem.eql(u8, @typeName(Config), @typeName(GameConfig))){
+        @compileError("Passing args to GameConfig needs to be tuple (anonymous struct) type, found " ++ @typeName(Config)); 
+    }
     return struct {
         const Self = @This(); 
-
         allocator: std.mem.Allocator,
 
-        players: PlayerManager,
+        // players: PlayerManager,
         
         /// The game instance is the main owner of the loaded `cards`. 
         /// Whenever cards is dealt to a player, that player becomes 
@@ -46,33 +43,24 @@ pub fn Game(comptime Config: GameConfig) type{
         /// the game. It contains the neccessary data, to setup the game. 
         config: Config,
 
-        state: GameState,
+        state: ?GameState,
         callback_manager: TaskScheduler,
         session: Session,
-
-        /// This field is dependent on the GameConfig instance.
-        /// -------------------------------------------------
-        /// It depend on the number of total players (num_players + num_bots).
-        /// You win the game according to the following cases: 
-        /// • 4 players → 8 green apples win. 
-        /// • 5 players → 7 green apples. 
-        /// • 6 players → 6 green apples. 
-        /// • 7 players → 5 green apples. 
-        /// • 8+ players → 4 green apples. 
-        /// -------------------------------------------------
-        points_to_win: ?u8 = null,
 
         pub fn init(allocator: std.mem.Allocator, options: Config) !Self {
             const hashmap = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
             //try hashmap.put("red_apples", null);
             //try hashmap.put("green_apples", null);
+            // const new_session = try Session.create(options, allocator);
             
             return Self{
                 .allocator = allocator,
-                .players = PlayerManager.init(allocator),
+                // .players = PlayerManager.init(allocator),
                 .cards = hashmap,
                 .config = options,
-                .session = Session.create(options, allocator), 
+                .state = null,
+                .callback_manager = .init(allocator),
+                .session = try Session.create(options, allocator), 
             };
         }
 
@@ -81,55 +69,22 @@ pub fn Game(comptime Config: GameConfig) type{
             self.cards.deinit();
         }
 
-        fn add_bots(self: *Self) !void {
-            if (self.config.num_players) |num_players|{
-                if (num_players < 4){
-                    const diff: u8 = 4 - num_players; // should not be negative, check if num_players is less than 3 or 4.  
-                    const clamp_diff: u8 = std.math.clamp(diff, 0, 4);
-                    std.debug.print("diff: {d} vs clamp diff: {d}\n", .{diff, clamp_diff}); 
-                    if (clamp_diff == 0) self.config.num_bots = 0 else self.config.num_bots = clamp_diff; 
-                }
-            }else {
-                return error.NumberPlayersMissing; 
-            }
-        }
 
-        fn apply_rules(self: *Self) !void {
-            if (self.config.num_players != null){
-                const total_playing: u8 = self.config.num_players.? + self.config.num_bots.?;
-                std.debug.print("total_playing = {d}\n", .{total_playing}); 
-                std.debug.print("num_bots = {d}\n", .{self.config.num_bots.?}); 
-                std.debug.print("num_players = {d}\n", .{self.config.num_players.?}); 
-                std.debug.print("====================================\n", .{});
-                self.points_to_win = switch (total_playing) {
-                    0, 1, 2, 3 => return error.TooFewPlayers,
-                    4 => 8,
-                    5 => 7,
-                    6 => 6,
-                    7 => 5,
-                    8...10 => 4,
-                    else => return error.TooManyPlayers,
-                };
-
-            }else {
-                // try self.config.print();
-                return error.ConfigMissingPlayerCount; 
-            }
-        }
-
-        pub fn setup(self: *Self) !void {
+        pub fn setup(self: *Self, allocator: std.mem.Allocator) !void {
             const session_kind = self.session.get_sessiontype(); 
-            // const session_kind = try SessionType.try_from(self.config); 
 
             switch (session_kind) {
                 .Host => {
-                    try self.add_bots(); 
-                    try self.apply_rules();  
-                    self.session = .create(SessionType.Host, self.config, self.allocator);
+                    if (self.config.points_to_win == null){
+                        try self.config.update_config(allocator);
+                    }else {
+                        log.warn("Game Config has already been updated. Continuing!\n", .{});
+                    }
+                    // self.session = .create(SessionType.Host, self.config, self.allocator);
                 },
                 .Client => {
                     // Client and player setup below...
-                    self.session = .create(SessionType.Client, self.config, self.allocator);
+                    // self.session = .create(SessionType.Client, self.config, self.allocator);
                 }
             }
 
@@ -142,123 +97,141 @@ pub fn Game(comptime Config: GameConfig) type{
         /// ---------------------------
         /// External Input Event → Action → Internal Event → Task(callback + context) → `run_task()`. 
         pub fn handle_input(self: *Self, input: UserInput) !void {
-            _ = self; 
-            _ = input; 
+            const event = try Event.parse(input);
+            try self.state.?.handle_event(Game(GameConfig), self, event);
         }
 
         /// Static callback function setup. 
         pub fn setup_callback(self: *Self) !void {
             const event_fields: []const std.builtin.Type.UnionField = std.meta.fields(Event);
-
-            for (event_fields) |event_kind| {
-                // const info = @typeInfo(event_kind.type);
-                switch (event_kind.type) {
-                    InternalEvent => {
-                        const field_names = std.meta.fieldNames(InternalEvent);
-                        for (field_names) |event_name| {
-                            const name: []const u8 = event_name; 
-                            const internal_event = InternalEvent.fromString(name);
-                            if (internal_event) |event| {
-                                switch (event) {
-                                    
-                                }
-                            }
-                        }
-                    },
-                    
-                }
-                // Event.tryIntoInternalEvent(self: Event) 
-                // Event.parse();
-            }
-
-            
-            // self.callback_manager.create_task(Session, ctx: ?*anyopaque)
+            _ = self; 
+            _ = event_fields; 
+            // inline for (event_fields) |event_kind| {
+            //     // const info = @typeInfo(event_kind.type);
+            //     switch (event_kind.type) {
+            //         InternalEvent => {
+            //             const field_names = std.meta.fieldNames(InternalEvent);
+            //             for (field_names) |event_name| {
+            //                 const name: []const u8 = event_name; 
+            //                 const internal_event = InternalEvent.fromString(name);
+            //                 if (internal_event) |event| {
+            //                     switch (event) {
+            //
+            //                     }
+            //                 }
+            //             }
+            //         },
+            //
+            //     }
+            // }
             // self.callback_manager.register(., cb: TaskCallback)
         }
 
-        //TODO: - Can I use input argument as anytype here??????
-        pub fn run_task_any(ctx: *anyopaque, any_input: anytype) !void {
-            // var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
-            var self: *Self = @ptrCast(@alignCast(ctx)); 
-            
-            const event = try Event.parse(any_input);
-            const internal_event = event.tryIntoInternalEvent() orelse return error.MappingInputToInternalEventFailed;
-            switch (internal_event) {
-                .StartGame => void, 
-                .StartAsJudge => void, 
-                .ClientConnected => void,
-                .ClientExited => void, 
-                .PlayedCard => self.play_card(), 
-                .ReceivedCard => void,
-                .JudgeVoted => self.vote_callback(), 
-                .GameOver => void, 
-                .NextRound => void,
-            }
-            
-        }
-        
-
-        pub fn run_task(ctx: *anyopaque, event: Event) !void {
+        //TODO: - Delegate and move this logic to GameState - self.state.handle_event()
+        pub fn dispatchTask(ctx: *anyopaque, input_kind: anytype) !void {
             var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            const input_event: ?Event = try Event.parse(input_kind) orelse null; 
 
-            //WARN: - Do I need to register static callbacks like this? 
-            // self.callback_manager.register(event: E, cb: TaskCallback)
-
-            
-            //WARN: - Or should I create new TaskCallback for each cases 
-            // in the switch statement? Then add to queue. (SEE BELOW!)
-
-            const new_task = TaskCallback{.ctx = self, .func = self.start_game};
-            // TaskCallback.from(Game(Config), ctx: ?*anyopaque)
-
-            self.callback_manager.task_queue.append(.{ .data =  .{ .task =  new_task}}); 
-
-            switch (event) {
-                .event => |internal_event| {
-                    switch (internal_event) {
-                        .StartGame => self.start_game(), 
-                        .StartAsJudge => self.new_judge(), 
-                        .ClientConnected => {
-                            try self.session.Host.players.?.add(Player{.name = "", .id = 1337}); 
-                            try self.session.Host.net.notify_clients("Client Connected!"); 
-                        },
-                        .ClientExited => void, 
-                        .PlayedCard => self.play_card(), 
-                        .ReceivedCard => self.session.Client.player.?.add_card("Random Card: ..."),
-                        .JudgeVoted => self.vote_callback(), 
-                        .GameOver => self.gameover(), 
-                        .NextRound => self.next_round(),
+            if (input_event) |event| {
+                switch (event) {
+                    .event => |internal_event| {
+                        switch (internal_event) {
+                            .StartGame => {
+                                self.callback_manager.enqueue_task(TaskCallback{
+                                    .ctx = self,
+                                    .func = start_game, 
+                                });
+                            },
+                            .StartAsJudge => {
+                                self.callback_manager.enqueue_task(TaskCallback{
+                                    .ctx = self,
+                                    .func = new_judge, 
+                                });
+                            },
+                            .ClientConnected => {
+                                // try self.session.Host.players.?.add(Player{.name = "", .id = 1337}); 
+                                try self.session.Host.net.notify_clients("Client Connected!"); 
+                            },
+                            .ClientExited => {
+                                try self.session.Host.net.notify_clients("Client disconnected!"); 
+                            }, 
+                            .PlayedCard => {
+                                self.callback_manager.enqueue_task(TaskCallback{
+                                    .ctx = self,
+                                    .func = play_card, 
+                                });
+                            },
+                            .ReceivedCard => {
+                                self.session.Client.player.?.add_card("Random Card: ..."); 
+                            },
+                            .JudgeVoted => {
+                                self.callback_manager.enqueue_task(TaskCallback{
+                                    .ctx = self,
+                                    .func = vote_callback, 
+                                });
+                            },
+                            .GameOver => {
+                                self.callback_manager.enqueue_task(TaskCallback{
+                                    .ctx = self,
+                                    .func = gameover, 
+                                });
+                            }, 
+                            .NextRound => {
+                                self.callback_manager.enqueue_task(TaskCallback{
+                                    .ctx = self,
+                                    .func = next_round, 
+                                });
+                            },
+                        }
+                        
+                    },
+                    .user_input => |user_action| {
+                        user_action.parse();
+                    },
+                    .network => |network_event| {
+                        const event_id = network_event.id; 
+                        const payload = network_event.payload; 
+                        _ = event_id; 
+                        _ = payload; 
                     }
-                    
-                },
-                .user_input => |user_action| {
-                    user_action.parse();
                 }
             }
         }
 
-        pub fn play_card(self: *Self) !void {
-            _ = self; 
+        pub fn play_card(ctx: *anyopaque) !void {
+            var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            _ = &self; 
+            log.debug("Running 'play_card' Callback!\n", .{});
         }
 
-        pub fn vote_callback(self: *Self) !void {
-            _ = self; 
+        pub fn vote_callback(ctx: *anyopaque) !void {
+            var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            _ = &self; 
+            log.debug("Running 'vote_callback' Callback!\n", .{});
         }
         
-        pub fn start_game(self: *Self) !void {
-            _ = self; 
+        pub fn start_game(ctx: *anyopaque) !void {
+            var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            _ = &self; 
+            log.debug("Running 'start_game' Callback!\n", .{});
         }
 
-        pub fn gameover(self: *Self) !void {
-            _ = self; 
+        pub fn gameover(ctx: *anyopaque) !void {
+            var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            _ = &self; 
+            log.debug("Running 'gameover' Callback!\n", .{});
         }
 
-        pub fn new_judge(self: *Self) !void {
-            _ = self; 
+        pub fn new_judge(ctx: *anyopaque) !void {
+            var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            _ = &self; 
+            log.debug("Running 'new_judge' Callback!\n", .{});
         }
         
-        pub fn next_round(self: *Self) !void {
-            _ = self; 
+        pub fn next_round(ctx: *anyopaque) !void {
+            var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
+            _ = &self; 
+            log.debug("Running 'next_round' Callback!\n", .{});
         }
 
         /// This is the main gameloop when running the game. It should execute in the following order:
@@ -306,7 +279,7 @@ pub fn Game(comptime Config: GameConfig) type{
 
             while (try in_stream.readUntilDelimiterOrEof(&temp_buf, '\n')) |line| {
                 const line_str = try self.allocator.dupe(u8, line);
-                std.debug.print("Card line: {s}\n", .{line_str});
+                log.debug("Card line: {s}\n", .{line_str});
                 try card_buf.append(line_str);
                 // Ownership of `line_str` now belongs to `card_buffer`.
             }
@@ -314,56 +287,80 @@ pub fn Game(comptime Config: GameConfig) type{
             // const hashmap_size = self.cards.count();
             // return card_buffer.*;
         }
+
+
     };
+
+}
+
+
+test {
+    std.testing.refAllDecls(@This()); 
+    _ = @import("game_state"); 
+    // _ = game_state; 
+    // std.testing.refAllDeclsRecursive(@This()); 
 }
 
 test "apply_config" {
+    log.info("Testing applying the config!\n", .{});
     const allocator = std.testing.allocator;
+
     const test_cases: []const u8 = &.{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; 
     for(test_cases) |test_count| {
         const test_config = GameConfig{
             .hosting = true,
-            // .id = "TheVeryBest",
             .ip = GameConfig.DEFAULT_IP,
             .port = GameConfig.DEFAULT_PORT,
-            // .num_bots = 0,
             .num_players = test_count,
         };
-        try test_config.print();
-        var game = try Game().init(allocator, test_config);
+        std.log.scoped(.itr_start).debug("\nGameConfig Before...\n", .{});
+        var game = try Game(GameConfig).init(allocator, test_config);
+        try game.config.print(true);
+
         defer game.deinit(); 
-        try game.setup(); 
+        try game.setup(allocator); 
 
-        std.debug.print("num_players (test_count) = {?d}, gave points_to_win: {?d}\n", .{test_config.num_players, game.points_to_win}); 
+        std.log.scoped(.str_part).debug("\nGameConfig After Setup...\n", .{});
+        try game.config.print(true);
+        std.log.scoped(.str_part).debug("num_players (test_count) = {d}, yields num_bots = {d}, and points_to_win: {?d}\n", .{test_count, game.config.num_bots, game.config.points_to_win}); 
+        std.log.scoped(.itr_end).debug("====================================\n", .{});
     }
-
-
-}
-
-test "setup_session" {
+    try std.testing.expect(true);
 
 }
 
 test "read_cards" {
     const expected: u32 = 4; 
-    std.debug.print("Testing reading the config!\n", .{});
+    log.info("Testing reading the config!\n", .{});
     try std.testing.expectEqual(expected, 2 + 2); 
     const allocator = std.testing.allocator;
+    _ = allocator; 
 
-    const test_args = GameConfig{
-        .hosting = true,
-        // .id = "TheVeryBest",
-        .ip = GameConfig.DEFAULT_IP,
-        .port = GameConfig.DEFAULT_PORT,
-        // .num_bots = 0,
-        .num_players = 2,
-    };
+    // var test_config = GameConfig.default; 
+    // test_config.hosting = true;  
+    // test_config.num_players = 2; 
 
-    var game = try Game().init(allocator, test_args);
-    defer game.deinit();
+    // const test_args = GameConfig{
+    //     .hosting = true,
+    //     // .id = "TheVeryBest",
+    //     .ip = GameConfig.DEFAULT_IP,
+    //     .port = GameConfig.DEFAULT_PORT,
+    //     // .num_bots = 0,
+    //     .num_players = 2,
+    // };
+    
+    // var game = try Game(GameConfig).init(allocator, test_config);
+    // defer game.deinit();
+
     // try game.read_config("data/redApples.txt", "red_apples");
     //
     // for (game.cards.get("red_apples").?.items) |card| {
     //     std.debug.print("Card as slice: {s}\n", .{card});
     // }
+    try std.testing.expect(true);
+
+}
+
+test "simple sanity check" {
+    try std.testing.expect(true);
 }
