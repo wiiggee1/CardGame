@@ -25,11 +25,12 @@ test "gamestate-module" {
     _ = @import("events.zig");
     _ = @import("states.zig");
     _ = @import("task_scheduler.zig");
-    std.testing.refAllDecls(@This()); 
-    try std.testing.expect(true);
+    // std.testing.refAllDecls(@This()); 
+    std.testing.refAllDeclsRecursive(@This()); 
     
     // Fail test: 
     // try std.testing.expect(false);
+    try std.testing.expect(true);
 
     // leak test: 
     const allocator = std.testing.allocator;

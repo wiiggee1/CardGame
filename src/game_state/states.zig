@@ -15,7 +15,11 @@ const TaskCallback = @import("task_scheduler.zig").TaskCallback;
 const TaskScheduler = @import("task_scheduler.zig").TaskScheduler;
 const events = @import("events.zig"); 
 const Event = events.Event; 
+const GameConfig = @import("../game.zig").GameConfig; 
+const Game = @import("../game.zig").Game(GameConfig); 
 const log = std.log.scoped(.gamestate_states);
+
+const StateContext = TaskCallback; 
 
 pub const State = enum {
     Initial,
@@ -48,6 +52,10 @@ const WaitingOthersState = struct{callback: TaskCallback};
 const JudgingState = struct{callback: TaskCallback};
 const UpdateState = struct{callback: TaskCallback}; 
 
+/// The `GameState` tagged union, represent the concrete active state. 
+/// It executes and gain access to only the active state's functionality. 
+/// Main purpose of this design principle is to have a clear separation 
+/// of the responsibility during different phases of the game. 
 pub const GameState = union(State) {
     /// This is the default starting state, during the setup. 
     Initial: InitialStartState, 
@@ -72,31 +80,44 @@ pub const GameState = union(State) {
     /// This is e.g., when we finish a game round and update scores etc...
     Update: UpdateState, 
 
+    pub const GameStateError = error {
+        FailedObtainingInternalEventDuringTransition,
+    };
 
     pub fn get_state(self: GameState) State {
         const tag: State = self;
         return tag; 
     }
 
-    // fn eventmsg_callback(ctx: ?*anyopaque) !void {
-    // const ctx_type: *EventMessage = @ptrCast(@alignCast(ctx));
-
     fn dummy_callback(ctx: ?*anyopaque) !void {
         var self: *GameState = @ptrCast(@alignCast(ctx)); 
         std.log.debug("{s} executed callback! \n", .{self.get_state().toString()});
     }
 
-    pub fn handle_event(self: *GameState, comptime GameType: type, game_ctx: *anyopaque, event_input: Event) !void {
-        var game: *GameType = @ptrCast(@alignCast(game_ctx)); 
-        // pub fn dispatchTask(ctx: *anyopaque, input_kind: anytype) !void {
-        // TaskScheduler(Event).run_callback(self: *Self, event: Event)
+    pub fn fsm_update(state_ctx: *anyopaque, game: *Game) void {
+        _ = state_ctx;
+        _ = game; 
+    }
 
+    /// The `fsm_handle` is a "Finite-State-Machine" state machine pattern logic. That
+    /// would encapsulate system behavior, by separating logic into concrete states, 
+    /// that would transition based on input events. 
+    pub fn fsm_handle(self: *GameState, comptime GameType: type, game_ctx: *anyopaque, event_input: Event) GameStateError!void {
+        var game: *GameType = @ptrCast(@alignCast(game_ctx)); 
         _ = &game; 
-        
+
+        //NOTE: - Using *anyopaque + function pointers, allows for state transition and logic without coupling (polymorphism).
+
         const current_state = self.get_state(); 
-        const event_kind = event_input.tryIntoInternalEvent() orelse return error.FailedObtainingInternalEventDuringTransition;
+        const event_kind = event_input.tryIntoInternalEvent() orelse return GameStateError.FailedObtainingInternalEventDuringTransition; 
         std.debug.print("Current State: {s}, Received Event: {s}\n", .{current_state.toString(), event_kind.toString()});
+
+        //TODO: - The GameState should use generic functions, for passing pointers
+        // such as the game_ctx for being able to access parent pointers fields. 
+        // Which impact the resulting state-to-state transitions. 
         
+        // Switch over the current active state. Then transition the active to new state.
+        // Based on different criterions! 
         switch (self.*) {
             .Initial => |*active_field| {
                 try active_field.setup_callback.run_task(); // Run state specific stuff upon entering state.

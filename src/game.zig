@@ -5,8 +5,8 @@
 //! ------------------------------------
 
 const std = @import("std");
-// pub const game_state = @import("game_state");
-const game_state = @import("game_state");
+// const game_state = @import("game_state");
+const game_state = @import("game_state/game_state.zig");
 const settings = @import("settings");
 
 const log = std.log.scoped(.game_logic);
@@ -32,8 +32,6 @@ pub fn Game(comptime Config: type) type{
         const Self = @This(); 
         allocator: std.mem.Allocator,
 
-        // players: PlayerManager,
-        
         /// The game instance is the main owner of the loaded `cards`. 
         /// Whenever cards is dealt to a player, that player becomes 
         /// the new owner of that card. 
@@ -51,11 +49,9 @@ pub fn Game(comptime Config: type) type{
             const hashmap = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
             //try hashmap.put("red_apples", null);
             //try hashmap.put("green_apples", null);
-            // const new_session = try Session.create(options, allocator);
             
             return Self{
                 .allocator = allocator,
-                // .players = PlayerManager.init(allocator),
                 .cards = hashmap,
                 .config = options,
                 .state = null,
@@ -295,10 +291,9 @@ pub fn Game(comptime Config: type) type{
 
 
 test {
-    std.testing.refAllDecls(@This()); 
-    _ = @import("game_state"); 
-    // _ = game_state; 
-    // std.testing.refAllDeclsRecursive(@This()); 
+    // std.testing.refAllDecls(@This()); 
+    // _ = @import("game_state"); 
+    
 }
 
 test "apply_config" {

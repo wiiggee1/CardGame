@@ -12,7 +12,6 @@ const NetworkEvent = events.NetworkEvent;
 const Event = events.Event; 
 const EventMessage = events.EventMessage; 
 
-
 // According to Zig documentation the following are stated: 
 // --------------------------------------------------------
 // "There is a difference between a function body and a function pointer.

@@ -2,8 +2,10 @@ const std = @import("std");
 const settings = @import("settings");
 const logging = @import("log.zig");
 
-const GameConfig = @import("game").GameConfig; 
-const Game = @import("game").Game(GameConfig);
+// const GameConfig = @import("game").GameConfig; 
+// const Game = @import("game").Game(GameConfig);
+const GameConfig = @import("game.zig").GameConfig; 
+const Game = @import("game.zig").Game(GameConfig);
 
 // pub const log_level: std.log.Level = .debug; 
 pub const std_options: std.Options = logging.custom_log_options; 
@@ -30,9 +32,9 @@ pub fn main() !void {
 
 test {
     // _ = @import("game.zig");
-    // _ = @import("game_state"); 
-    // _ = @import("game.zig"); 
-    // std.testing.refAllDecls(@This()); 
+    _ = @import("game.zig"); 
+    _ = @import("game_state/game_state.zig"); 
+    std.testing.refAllDecls(@This()); 
 
     // _ = game_state; 
     // std.testing.refAllDeclsRecursive(@This()); 
