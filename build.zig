@@ -102,7 +102,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{.name = "settings", .module = settings_mod},
-            .{.name = "game_state", .module = game_state_mod},
+            // .{.name = "game_state", .module = game_state_mod},
         },
     });
         
@@ -130,6 +130,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("game", game_mod); 
+    exe.root_module.addImport("game_state", game_state_mod); 
     exe.root_module.addImport("network", network_mod); 
 
     // This declares intent for the executable to be installed into the
@@ -179,7 +180,8 @@ pub fn build(b: *std.Build) void {
     const unit_testing = b.addTest(.{
         .name = "game-test",
         .filters = if (test_filter) |filter| &.{filter} else &.{}, 
-        .root_source_file = b.path("src/game.zig"), // working
+        // .root_source_file = b.path("src/game.zig"), // working
+        .root_source_file = b.path("src/main.zig"), // testing?!?!?
         // .root_module = exe_mod,
         // .root_module = b.createModule(.{
         //         .root_source_file = b.path("src/game.zig"),
@@ -200,26 +202,26 @@ pub fn build(b: *std.Build) void {
         .test_runner = .{ .path = b.path("src/unit_testing.zig"), .mode = .simple},
     });
 
-    // Add the imports that the game_mod is using to the test. 
+    _ = gamestate_testing; 
 
-    // unit_testing.root_module.addImport("state", state);
-    // unit_testing.root_module.addImport("event", event);
-    // unit_testing.root_module.addImport("task_scheduler", task_scheduler);
+    // Add the imports that the game_mod is using to the test. 
 
     // Working
     unit_testing.root_module.addImport("settings", settings_mod);
     unit_testing.root_module.addImport("game_state", game_state_mod);
+    unit_testing.root_module.addImport("game", game_mod);
 
     const run_game_testing = b.addRunArtifact(unit_testing);
     run_game_testing.has_side_effects = true; 
     
-    const runstep_gamestep = b.addRunArtifact(gamestate_testing);
-    runstep_gamestep.has_side_effects = true; 
+    // gamestate_testing.root_module.addImport("game", game_mod);
+    // const runstep_gamestep = b.addRunArtifact(gamestate_testing);
+    // runstep_gamestep.has_side_effects = true; 
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
     // running the unit tests.
     const test_step = b.step("test", "Run unit tests (test runner) for the Game");
     test_step.dependOn(&run_game_testing.step);
-    test_step.dependOn(&runstep_gamestep.step);
+    // test_step.dependOn(&runstep_gamestep.step);
 }
