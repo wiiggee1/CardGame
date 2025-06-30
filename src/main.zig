@@ -19,7 +19,7 @@ pub fn main() !void {
     std.log.info("Setting up the GameConfig Now!\n", .{});
     var game_config = try GameConfig.parse_args(allocator);
     defer game_config.deinit(allocator); // This would free the allocated `id` field. 
-    try game_config.print(true);
+    try game_config.print(.DebugLogging, .{});
     var game_obj = try Game.init(allocator, game_config); 
     try game_obj.setup(allocator);
 

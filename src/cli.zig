@@ -43,6 +43,13 @@ pub const GameConfig = struct {
     /// -------------------------------------------------
     points_to_win: ?u8 = null,
 
+    pub const PrintOptions = enum {
+        /// Sets if we should use debug as logging level. 
+        DebugLogging,
+        /// Compare before and after configuration.
+        Compare,
+        Default,
+    };
 
     const ArgParsingError = error {
         NeedToBeHost,
@@ -149,31 +156,88 @@ pub const GameConfig = struct {
     /// ---------------------------------------------
     /// "Don't write to stdout if you are not the main application!"
     /// https://github.com/ziglang/zig/issues/15091#issuecomment-1788192127
-    pub fn print(self: Self, debug_log: bool) !void {
-        // const stdout = std.io.getStdOut().writer(); 
+    pub fn print(self: Self, options: PrintOptions, comparator: anytype) !void {
         // const stderr = std.io.getStdErr().writer(); // Use stderr, for error message during debugging and testing. 
         const fields = @typeInfo(@TypeOf(self)).@"struct".fields;
-        // try stdout.print("{s:>5}\n", .{"GameConfig:"}); 
-        if (debug_log) std.log.debug("{s:>5}\n", .{"GameConfig:"}) 
-        else try std.io.getStdErr().writer().print("{s:>5}\n", .{"GameConfig:"});
 
-        // std.fmt.format(writer: anytype, comptime fmt: []const u8, args: anytype)
-        // std.fmt.comptimePrint
+        switch(options){
+            .DebugLogging => std.log.debug("{s:>5}\n", .{"GameConfig:"}),
+            .Compare => {
+                // const info = @typeInfo(@TypeOf(comparator));
+                // if (info.optional == null) return error.TheComparatorIsNull; 
+                if (@TypeOf(comparator) != @TypeOf(self)) return error.TryingToCompareTwoDifferentTypes; 
+                try std.io.getStdErr().writer().print("{s:>5}\n", .{"GameConfig - Comparision [BEFORE / AFTER]:"}); 
+                
+
+            },
+            .Default => try std.io.getStdErr().writer().print("{s:>5}\n", .{"GameConfig:"}),
+        }
         
 
         inline for (fields) |field| {
-            const print_format = "\t{s:<15}: " ++ switch (field.type) {
-                []u8, []const u8 => "{s}\n",
-                ?[]const u8, ?[]u8 => "{?s}\n",
-                bool => "{}\n",
-                ?u8, ?u16 => "{?d}\n",
-                else => "{any}\n",
-            }; 
+            const is_modified: bool = outer_blk: {
+                if (options == .Compare and @TypeOf(comparator) == @TypeOf(self)){
+                    const field_modified: bool = blk: {
+                        const is_different = switch (field.type) {
+                            []u8, []const u8 => (@field(self, field.name) != @field(comparator, field.name)),
+                            ?[]const u8, ?[]u8 => str_blk: {
+                                const first = @field(self, field.name) orelse ""; 
+                                const second = @field(comparator, field.name) orelse ""; 
+                                const same_len = (first.len == second.len);
+                                if(same_len and first.len == 0) break :str_blk false; 
 
-            // if (debug_log) std.log.debug(print_format, .{field.name, @field(self, field.name)}) 
-            if (debug_log) std.log.scoped(.inner).debug(print_format, .{field.name, @field(self, field.name)}) 
-            else try std.io.getStdErr().writer().print(print_format, .{field.name, @field(self, field.name)});
-            // try stdout.print(print_format, .{field.name, @field(self, field.name)});
+                                const match_digit = ((first[0] == second[0]) and (first[first.len - 1] == second[second.len - 1]));
+                                break :str_blk if (same_len and match_digit) false else true; 
+                            },
+                            bool => (@field(self, field.name) != @field(comparator, field.name)),
+                            ?u8, ?u16 => case_blk: {
+                                const first = @field(self, field.name) orelse 0; 
+                                const second = @field(comparator, field.name) orelse 0; 
+                                break :case_blk if (first == second) false else true; 
+                            },
+                            else => (@field(self, field.name) != @field(comparator, field.name)),
+                        }; 
+
+                        if (is_different) {
+                            break :blk true; 
+                        } else {
+                            break :blk false; 
+                        }
+                    };
+                    break :outer_blk field_modified; 
+
+                }else {
+                    break :outer_blk false; 
+                }
+            };
+
+            if(is_modified){
+                const comparison_format = "\t{s:<15}: " ++ switch (field.type) {
+                    []u8, []const u8 => "{s} => {s}\n",
+                    ?[]const u8, ?[]u8 => "{?s} => {?s}\n",
+                    bool => "{} => {}\n",
+                    ?u8, ?u16 => "{?d} => {?d}\n",
+                    else => "{any} => {any}\n",
+                }; 
+                try std.io.getStdErr().writer().print(comparison_format, .{field.name, @field(self, field.name), @field(comparator, field.name)});
+
+                // try std.io.getStdErr().writer().print(comparison_format, .{field.name, @field(comparator, field.name), @field(self, field.name)});
+
+            }else {
+                const print_format = "\t{s:<15}: " ++ switch (field.type) {
+                    []u8, []const u8 => "{s}\n",
+                    ?[]const u8, ?[]u8 => "{?s}\n",
+                    bool => "{}\n",
+                    ?u8, ?u16 => "{?d}\n",
+                    else => "{any}\n",
+                }; 
+
+                switch(options){
+                    .DebugLogging => std.log.scoped(.inner).debug(print_format, .{field.name, @field(self, field.name)}),
+                    .Compare => try std.io.getStdErr().writer().print(print_format, .{field.name, @field(self, field.name)}),
+                    .Default => try std.io.getStdErr().writer().print(print_format, .{field.name, @field(self, field.name)}),
+                }
+            }
         }
     }
 
@@ -251,7 +315,7 @@ pub const GameConfig = struct {
         }
 
         try game_config.update_config(allocator); 
-        try game_config.print(true);
+        try game_config.print(.DebugLogging, .{});
         // const session_tag = try SessionType.try_from(game_config); 
         // try stdout.print("GameConfig and SessionType.try_from gave: {s}\n", .{@tagName(session_tag)});
 
@@ -324,7 +388,6 @@ pub const GameConfig = struct {
             if (num_players < 4){
                 const diff: u8 = 4 - num_players; // should not be negative, check if num_players is less than 3 or 4.  
                 const clamp_diff: u8 = std.math.clamp(diff, 0, 4);
-                std.log.debug("diff: {d} vs clamp diff: {d}\n", .{diff, clamp_diff}); 
                 if (clamp_diff == 0) self.num_bots = 0 else self.num_bots = clamp_diff; 
             }
         }else {

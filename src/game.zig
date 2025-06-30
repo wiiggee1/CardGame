@@ -296,6 +296,26 @@ test {
     
 }
 
+// fn test_bot_count()
+
+fn test_points_mapping(game: *Game(GameConfig), allocator: std.mem.Allocator) bool {
+    // game.setup(allocator) catch return false; 
+    _ = allocator; 
+    const total: u8 = game.config.num_bots + game.config.num_players.?; 
+    const actual = game.config.points_to_win; 
+
+    const expected_mapping: u8 = switch (total) {
+        0,1,2,3 => return false, 
+        4 => 8,
+        5 => 7,
+        6 => 6,
+        7 => 5,
+        else => 4,
+    };
+
+    return actual == expected_mapping;
+}
+
 test "apply_config" {
     log.info("Testing applying the config!\n", .{});
     const allocator = std.testing.allocator;
@@ -308,17 +328,20 @@ test "apply_config" {
             .port = GameConfig.DEFAULT_PORT,
             .num_players = test_count,
         };
-        std.log.scoped(.itr_start).debug("\nGameConfig Before...\n", .{});
+        // std.log.scoped(.itr_start).debug("\nGameConfig Before...\n", .{});
         var game = try Game(GameConfig).init(allocator, test_config);
-        try game.config.print(true);
+        // try game.config.print(.DebugLogging, .{});
 
         defer game.deinit(); 
         try game.setup(allocator); 
+         
+        try test_config.print(.Compare, game.config);
+        try std.testing.expect(test_points_mapping(&game, allocator));
 
-        std.log.scoped(.str_part).debug("\nGameConfig After Setup...\n", .{});
-        try game.config.print(true);
-        std.log.scoped(.str_part).debug("num_players (test_count) = {d}, yields num_bots = {d}, and points_to_win: {?d}\n", .{test_count, game.config.num_bots, game.config.points_to_win}); 
-        std.log.scoped(.itr_end).debug("====================================\n", .{});
+        // std.log.scoped(.str_part).debug("\nGameConfig After Setup...\n", .{});
+        // try game.config.print(.DebugLogging, .{});
+        // std.log.scoped(.str_part).debug("num_players (test_count) = {d}, yields num_bots = {d}, and points_to_win: {?d}\n", .{test_count, game.config.num_bots, game.config.points_to_win}); 
+        // std.log.scoped(.itr_end).debug("====================================\n", .{});
     }
     try std.testing.expect(true);
 

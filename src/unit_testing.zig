@@ -208,8 +208,7 @@ pub fn main() !void {
     try stderr.print("\r\x1b[0K", .{}); // beginning of line and clear to end of line
 
     for (builtin.test_functions) |test_target| {
-        // std.debug.print("\ntest_target: {}\n\n", .{test_target});
-        std.debug.print("\ntest_target.name: {s}\n\n", .{test_target.name});
+        // std.debug.print("\ntest_target.name: {s}\n\n", .{test_target.name});
         if(std.mem.endsWith(u8, test_target.name, ".test_0")) continue;
         
         std.testing.allocator_instance = .{};
@@ -248,58 +247,41 @@ pub fn main() !void {
             break :name_blk iter.next() orelse test_target.name;
         };
 
-        // const name_test = test_name orelse test_target.name; 
-        std.debug.print("Found Module name: {s} and test_function: {s}\n", .{module_name, test_name}); 
+        // std.debug.print("Found Module name: {s} and test_function: {s}\n", .{module_name, test_name}); 
 
         if (std.mem.indexOf(u8, test_target.name, test_filter) == null) continue; 
-         
-        // const now = try std.time.Instant.now();
-        // std.debug.print("Instant now: {}\n", .{now});
 
         const start = std.time.microTimestamp();
         test_target.func() catch |err| {
-            // try stderr.print("Test: {s} :\tFailed with error: {} ❌\n", .{test_target.name, err});
             try coverage.test_cases.append(.{.test_name = test_name, .metric = .failed, .duration = null, .err_msg = err}); 
             coverage.failed += 1; 
             if (@errorReturnTrace()) |stack_trace| {
-                // std.builtin.StackTrace{}
-                // std.debug.StackIterator.init(first_address: ?usize, fp: ?usize)
                 std.debug.dumpStackTrace(stack_trace.*);
             }
             continue;
         };
         
-        // const end = std.time.milliTimestamp();
         const end = std.time.microTimestamp();
         const duration_micro: i64 = end - start; 
         const duration_mili = 0.001 * @as(f32, @floatFromInt(duration_micro));
-        
-        // std.debug.print("numerator: {d:.5}, duration_micro: {d:.5}, duration_mili: {d:.5}\n", .{numerator, duration_micro, duration_mili});
 
-        // try stderr.print("Test: {s} :\tPassed, duration: {d}ms ✅\n", .{test_target.name, duration}); 
         try coverage.test_cases.append(.{.test_name = test_name, .metric = .passed, .duration = duration_mili, .err_msg = null}); 
 
         if (std.testing.allocator_instance.deinit() == .leak){
             const func_addr = @intFromPtr(test_target.func);
             std.debug.print("Test Function Addr: {d}\n", .{func_addr});
-            // std.debug.dumpCurrentStackTrace(func_addr);
-            // std.debug.dumpStackPointerAddr(prefix: []const u8)
 
-            // try stderr.print("\n\tTest: {s} :\tLeaked memory ⚠️\n", .{test_target.name}); 
             try coverage.test_cases.append(.{.test_name = test_name, .metric = .leaked, .duration = duration_mili, .err_msg = null}); 
             coverage.leaked += 1; 
         }
         coverage.passed += 1; 
     }
-    // coverage.*.total = coverage.passed + coverage.failed; 
+
     var map_iter = coverage_map.valueIterator(); 
     while(map_iter.next()) |coverage| {
         coverage.total = coverage.failed + coverage.passed; 
     }
     try TestSummary.showTestCoverage(coverage_map, stderr);
-    // try coverage.showTestSummary(stderr, ""); 
-    // try coverage.showTestSummary(stderr, module_name_header); 
-    // try coverage.showAllTestCases(stderr);
     
 }
 

@@ -19,9 +19,162 @@ const GameConfig = @import("../game.zig").GameConfig;
 const Game = @import("../game.zig").Game(GameConfig); 
 const log = std.log.scoped(.gamestate_states);
 
-const StateContext = TaskCallback; 
+const State = struct {
+    ptr: *anyopaque,
+    execute_fn: *const fn(ctx: *anyopaque, game: *Game) anyerror!void,
+    transition_fn: *const fn(ctx: *anyopaque, comptime T: type) anyerror!State,
+    update_fn: *const fn(ctx: *anyopaque) anyerror!void,
 
-pub const State = enum {
+    pub fn execute(self: State, game: *Game) !void{
+        self.execute_fn(self.ptr, game);
+    }
+
+
+    pub fn transition(self: State, comptime T: type) !T{
+        if (!@hasDecl(T, "execute")) @compileError("Type: "++@typeName(T)++" missing a 'execute' fn!"); 
+        if (!@hasDecl(T, "transition")) @compileError("Type "++@typeName(T)++" missing a 'transition' declaration fn!"); 
+        self.transition_fn(self.ptr, T);
+    }
+
+    pub fn update(self: *State) !void{
+        self.update_fn(self.ptr);
+    }
+   
+    // pub fn allocator(self: *ArenaAllocator) Allocator {
+    //     return .{
+    //         .ptr = self,
+    //         .vtable = &.{
+    //             .alloc = alloc,
+    //             .resize = resize,
+    //             .remap = remap,
+    //             .free = free,
+    //         },
+    //     };
+    // }
+    // const self: *ArenaAllocator = @ptrCast(@alignCast(ctx));
+
+    pub fn Any(comptime StateContext: type, comptime funcs: anytype) type{
+        if (!@hasDecl(StateContext, "execute")) @compileError("Context Type: "++@typeName(StateContext)++" missing a 'execute' fn!"); 
+        if (!@hasDecl(StateContext, "transition")) @compileError("Context Type "++@typeName(StateContext)++" missing a 'transition' declaration fn!"); 
+        if (!@hasDecl(StateContext, "update")) @compileError("Context Type "++@typeName(StateContext)++" missing a 'update' fn!"); 
+
+        return struct {
+            ctx: StateContext, 
+            vtable: StateVTable,
+
+            const Self = @This();
+
+            const StateVTable: type = vtable:{
+                const info = @typeInfo(@TypeOf(funcs));
+                if(info.@"struct" != std.builtin.Type.Struct){
+                    const num_funcs = info.@"struct".fields.len;
+                    _ = num_funcs; 
+                     
+                    for (info.@"struct".fields) |field| {
+                        if (@typeInfo(field.type) != std.builtin.Type.Fn) @compileError("Field of struct need to be of 'Fn' type!");
+                        const fn_info = @typeInfo(field.type).@"fn";
+                        _ = fn_info; 
+                        const fn_type = @typeName(field.type);
+                        const fn_name = field.name;
+                        log.debug("fn_type: {s}, fn_name: {s}", .{fn_type, fn_name});
+                    }
+                    break :vtable @Type(.{
+                       info,
+                    });
+
+                }else {
+                    @compileError("Passed argument need to be a struct with functions. Got: "++@typeName(@TypeOf(funcs)));
+                }
+                
+            }; 
+        };
+    }
+
+    pub fn AnyState(
+        comptime Ctx: type,
+        comptime exe_func: fn (ctx: Ctx, game: *Game) anyerror!void,
+        comptime update_func: fn (ctx: Ctx) anyerror!void,
+        comptime transition_func: fn (ctx: Ctx, new_ctx: Ctx) anyerror!void,
+    ) type {
+
+        if (!@hasDecl(Ctx, "execute")) @compileError("Context Type: "++@typeName(Ctx)++" missing a 'execute' fn!"); 
+        if (!@hasDecl(Ctx, "transition")) @compileError("Context Type "++@typeName(Ctx)++" missing a 'transition' declaration fn!"); 
+        if (!@hasDecl(Ctx, "update")) @compileError("Context Type "++@typeName(Ctx)++" missing a 'update' fn!"); 
+
+        return struct {
+            ctx: Ctx, 
+            const Self = @This(); 
+
+            const ContextChild: type = child_type:{
+                const ctx_info = @typeInfo(Ctx);
+                if (ctx_info == .@"union"){
+                    for (ctx_info.@"union".decls)|fn_decl|{ _ = fn_decl;}
+                    for (ctx_info.@"union".fields)|field|{ _ = field;}
+                }
+                break :child_type ctx_info.@"union".tag_type.?; 
+            };
+
+            pub inline fn new(self: *const Self) State {
+                if (Ctx == GameState){
+                    const gamestate_ctx: *GameState = @ptrCast(@alignCast(&self.ctx));
+                    return State{
+                        .ptr = gamestate_ctx,
+                        .execute_fn = gamestate_ctx.execute,
+                        .transition_fn = gamestate_ctx.fsm_handle,
+                        .update_fn = gamestate_ctx.fsm_update,
+                    };
+                }
+
+                const ctx_ptr: *Ctx = @ptrCast(@alignCast(&self.ctx)); 
+                // const ctx_ptr: *Ctx = @ptrCast(&self.ctx); 
+
+                return State{
+                    .ptr = ctx_ptr,
+                    .execute_fn = any_execute,
+                    .transition_fn = transition,
+                    .update_fn = update,
+                };
+            }
+
+            fn any_execute(state_ctx: *anyopaque, game: *Game) anyerror!void{
+                // const self: *Ctx = @ptrCast(@alignCast(state_ctx)); 
+                const ptr: *Ctx = @alignCast(@ptrCast(state_ctx)); // Would this set our Ctx field?
+                return exe_func(ptr, game);
+            }
+
+            fn any_update(state_ctx: *anyopaque) anyerror!void{
+                // const self: *Ctx = @ptrCast(@alignCast(state_ctx)); 
+                const self: *Ctx = @alignCast(@ptrCast(state_ctx));
+                return update_func(self);
+            }
+
+            fn any_transition(state_ctx: *anyopaque, other_state: *Ctx) anyerror!void{
+                // const self: *Ctx = @ptrCast(@alignCast(state_ctx)); 
+                
+                const self: *Ctx = @alignCast(@ptrCast(state_ctx));
+                return transition_func(self);
+            }
+        };
+
+    }
+
+    /// For mapping to a State, with some checks. 
+    pub fn state(ctx: *anyopaque, comptime T: type) State {
+    // pub fn state(self: *StateDefault, comptime T: type) StateDefault {
+        if (!@hasDecl(T, "execute")) @compileError("Type: "++@typeName(T)++" missing a 'execute' fn!"); 
+        if (!@hasDecl(T, "transition")) @compileError("Type "++@typeName(T)++" missing a 'transition' declaration fn!"); 
+        if (!@hasDecl(T, "update")) @compileError("Type "++@typeName(T)++" missing a 'update' fn!"); 
+        const self: *T = @ptrCast(@alignCast(ctx)); 
+        return State{
+            .ptr = self, 
+            .execute_fn = self.execute,
+            .transition_fn = self.transition,
+            .update_fn = self.update,
+        };
+    }
+}; 
+
+pub const StateType = enum {
     Initial,
     MainMenu,
     Playing,
@@ -29,7 +182,7 @@ pub const State = enum {
     Judging,
     Update, 
 
-    pub fn toString(self: State) []const u8{
+    pub fn toString(self: StateType) []const u8{
         const name: []const u8 = @tagName(self);
         return name;  
     }
@@ -45,66 +198,124 @@ pub fn debug_info(any: anytype, allocator: std.mem.Allocator) !void {
 }
 
 
-const InitialStartState = struct{setup_callback: TaskCallback};
-const MainMenuState = struct{callback: TaskCallback};
-const PlayingState = struct{callback: TaskCallback};
-const WaitingOthersState = struct{callback: TaskCallback};
-const JudgingState = struct{callback: TaskCallback};
-const UpdateState = struct{callback: TaskCallback}; 
+// const DummyState = State.AnyState()
+// const InitialStartState = struct{
+//     pub fn execute(ctx: *anyopaque, game: *Game) !void {
+//         const self: *InitialStartState = @ptrCast(@alignCast(ctx));
+//         _ = game; 
+//         _ = self; 
+//     }
+// };
+
+// const test_state = DummyState(
+//                         comptime Ctx: type, 
+//                         comptime exe_func: fn(ctx:Ctx, game:*Game)anyerror!void, 
+//                         comptime update_func: fn(ctx:Ctx)anyerror!void, 
+//                         comptime transition_func: fn(ctx:Ctx, new_ctx:Ctx)anyerror!void
+//                     )
+
+pub const AnyGameState = State.AnyState(
+                        *GameState, 
+                        GameState.execute, 
+                        GameState.fsm_update, 
+                        GameState.fsm_handle 
+                    );
+
 
 /// The `GameState` tagged union, represent the concrete active state. 
 /// It executes and gain access to only the active state's functionality. 
 /// Main purpose of this design principle is to have a clear separation 
 /// of the responsibility during different phases of the game. 
-pub const GameState = union(State) {
+pub const GameState = union(StateType) {
     /// This is the default starting state, during the setup. 
-    Initial: InitialStartState, 
+    Initial: AnyGameState, 
     /// The `Menu` state, is the first entry prompt, and when waiting for expected 
     /// players to connect. 
-    MainMenu: MainMenuState,
+    MainMenu: AnyGameState,
     /// Whenever, we are in the `playing` state, we can perform game actions. 
     /// This is the state, for picking a red card during the game round. 
-    Playing: PlayingState,
+    Playing: AnyGameState,
 
     /// During the `Waiting` state, we have either performed our actions for that round. 
     /// Or we are waiting for players to join the game. In other words, in this state, 
     /// we wait for other players to finish their moves (actions).
-    Waiting: WaitingOthersState,
+    Waiting: AnyGameState,
 
     /// The `Judging` state, is the same as playing state, but execute 
     /// voting actions instead. By picking the appropriate card among the 
     /// received ones. 
-    Judging: JudgingState,
+    Judging: AnyGameState,
 
     /// Update state, is the updated and modified instance components. 
     /// This is e.g., when we finish a game round and update scores etc...
-    Update: UpdateState, 
+    Update: AnyGameState, 
 
     pub const GameStateError = error {
         FailedObtainingInternalEventDuringTransition,
     };
 
-    pub fn get_state(self: GameState) State {
-        const tag: State = self;
+    pub fn get_state(self: GameState) StateType {
+        const tag: StateType = self;
         return tag; 
+    }
+
+    pub fn intoGameState(kind: StateType) GameState{
+        return switch (kind) {
+            .Initial => GameState{.Initial = .{ .ctx = .Initial }}
+        };
+    }
+
+    pub fn intoState(self: *GameState) State{
+        // const sc = AnyGameState.new();
+        const state = GameState{.Initial = .{ .ctx = .Initial }};
+        state.Initial.new();
+        // switch (self.*) {
+            // inline else => |*active_state| {
+                // return AnyGameState.new(self: *const Self)
+            // }
+        // }
+        return switch(self.*){
+            .Initial => |*ctx| ctx.new(),
+            // StateType.MainMenu => return AnyGameState{.ctx = .{ .Initial =  },
+            StateType.Initial => return AnyGameState.new(.{ .ctx = .Initial }),
+            StateType.Initial => return AnyGameState.new(.{ .ctx = .Initial }),
+            StateType.Initial => return AnyGameState.new(.{ .ctx = .Initial }),
+        };
     }
 
     fn dummy_callback(ctx: ?*anyopaque) !void {
         var self: *GameState = @ptrCast(@alignCast(ctx)); 
         std.log.debug("{s} executed callback! \n", .{self.get_state().toString()});
     }
+    
+    // execute_fn: *const fn(ctx: *anyopaque, game: *Game) anyerror!void,
+    // transition_fn: *const fn(ctx: *anyopaque, comptime T: type) anyerror!State,
 
-    pub fn fsm_update(state_ctx: *anyopaque, game: *Game) void {
-        _ = state_ctx;
+
+    pub fn fsm_update(self: *GameState) !void {
+        switch (self.*) {
+            inline else => |*active_state| {
+                active_state.update();
+            }
+        }
+    }
+    pub fn execute(ctx: *anyopaque, game: *Game) !void {
+        const self: *GameState = @ptrCast(@alignCast(ctx));
         _ = game; 
+        switch (self.*) {
+            inline else => |*active_state| {
+                active_state.execute();
+            }
+        }
+
     }
 
     /// The `fsm_handle` is a "Finite-State-Machine" state machine pattern logic. That
     /// would encapsulate system behavior, by separating logic into concrete states, 
     /// that would transition based on input events. 
-    pub fn fsm_handle(self: *GameState, comptime GameType: type, game_ctx: *anyopaque, event_input: Event) GameStateError!void {
-        var game: *GameType = @ptrCast(@alignCast(game_ctx)); 
-        _ = &game; 
+    pub fn fsm_handle(self: *GameState, event_input: Event) GameStateError!void {
+        // var game: *GameType = @ptrCast(@alignCast(game_ctx)); 
+        // _ = &game; 
 
         //NOTE: - Using *anyopaque + function pointers, allows for state transition and logic without coupling (polymorphism).
 
@@ -263,17 +474,6 @@ pub const GameState = union(State) {
 
     }
 
-    pub fn execute(self: GameState) !void {
-        // switch (self) {
-        //     .MainMenu => |menu| {},
-        //     .Playing => |play| {},
-        //     .Waiting => |waiting| {},
-        //     .Judging => |judge| {},
-        //     .Update => |update| {},
-        // }
-        _ = self; 
-    }
-
 };
 
 test "state-transitions" {
@@ -285,7 +485,7 @@ test "state-transitions" {
         .Exit,
     };
 
-    const expected_states = [_]State{
+    const expected_states = [_]StateType{
         .Initial,
         .MainMenu,
         .Playing,
@@ -298,6 +498,10 @@ test "state-transitions" {
         .NextRound,
         .JudgeVoted, 
     };
+    
+    // std.mem.Allocator
+    // std.heap.DebugAllocator
+    // var initial_state = GameState{.Initial = .{ .setup_callback =  }
 
     _ = expected_states; 
     _ = test_events; 

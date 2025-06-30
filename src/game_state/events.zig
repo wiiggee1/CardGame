@@ -444,12 +444,18 @@ test "event_type_parsing" {
         if (@TypeOf(input) == []const []const u8) {
             for (input) |str_userinput| {
                 std.log.scoped(.event_type_parsing).info("\nTrying to Parse the string: '{s}'\n", .{str_userinput}); 
-                _ = Event.parse(str_userinput) catch |err| std.log.scoped(.event_type_parsing).err("\nFailed with: {}\n", .{err}); 
+                const out: ?Event = Event.parse(str_userinput) catch |err| blk: {
+                    std.log.scoped(.event_type_parsing).err("\nFailed with: {}\n", .{err}); 
+                    break :blk null; 
+                };
+                if (out) |output_event| {
+                    std.log.scoped(.event_type_parsing).debug("Event Returned: {}\n\n", .{output_event}); 
+                }
             }
         }else {
             std.log.scoped(.event_type_parsing).info("\nTrying to Parse the type: '{}', with Value: {any}\n", .{@TypeOf(input), input}); 
             const out = try Event.parse(input); 
-            std.log.scoped(.event_type_parsing).warn("Event Returned: {}\n", .{out}); 
+            std.log.scoped(.event_type_parsing).debug("Event Returned: {}\n", .{out}); 
 
         }
     }
