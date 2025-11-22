@@ -21,6 +21,7 @@ const NetworkEvent = game_state.NetworkEvent;
 const Event = game_state.Event; 
 
 const GameState = game_state.GameState; 
+const State = game_state.State; 
 const TaskScheduler = game_state.TaskScheduler(Event); 
 const TaskCallback = game_state.TaskCallback; 
 
@@ -30,6 +31,7 @@ pub fn Game(comptime Config: type) type{
     }
     return struct {
         const Self = @This(); 
+        pub const AnyGameState = State.AnyState(GameState, GameState.execute, GameState.fsm_update, GameState.fsm_transition);
         allocator: std.mem.Allocator,
 
         /// The game instance is the main owner of the loaded `cards`. 
@@ -41,21 +43,25 @@ pub fn Game(comptime Config: type) type{
         /// the game. It contains the neccessary data, to setup the game. 
         config: Config,
 
-        state: ?GameState,
-        callback_manager: TaskScheduler,
+        // state: AnyGameState,
+        state: State,
+        scheduler: TaskScheduler,
         session: Session,
 
         pub fn init(allocator: std.mem.Allocator, options: Config) !Self {
             const hashmap = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
             //try hashmap.put("red_apples", null);
             //try hashmap.put("green_apples", null);
-            
+
+            const gamestate = AnyGameState{.ctx = .from(.Initial)};
+
             return Self{
                 .allocator = allocator,
                 .cards = hashmap,
                 .config = options,
-                .state = null,
-                .callback_manager = .init(allocator),
+                // .state = .{ .ctx = .from(.Initial) },
+                .state = gamestate.new(),
+                .scheduler = .init(allocator),
                 .session = try Session.create(options, allocator), 
             };
         }
@@ -63,6 +69,15 @@ pub fn Game(comptime Config: type) type{
         pub fn deinit(self: *Self) void {
             self.config.deinit(self.allocator); 
             self.cards.deinit();
+        }
+
+        pub fn getField(self: *Self, comptime field_name: []const u8) !@FieldType(Self, field_name) {
+            if (!@hasField(@TypeOf(Self), field_name)) return error.FieldDoesntExist; 
+            return @field(self, field_name);
+            // @fieldParentPtr(comptime field_name: []const u8, field_ptr: *T)
+            // const info = @typeInfo(@TypeOf(self.*));
+            // inline for(info.@"struct".fields) |field| {
+            // }
         }
 
 
@@ -86,6 +101,10 @@ pub fn Game(comptime Config: type) type{
 
         }
 
+        pub fn update_state(self: *Self, new_state: State) !void{
+            self.state = new_state;  
+        }
+
 
         /// Handles external input events. Should iterate or switch over
         /// a dedicated `UserInput` event type. Thus map an external input 
@@ -94,39 +113,35 @@ pub fn Game(comptime Config: type) type{
         /// External Input Event → Action → Internal Event → Task(callback + context) → `run_task()`. 
         pub fn handle_input(self: *Self, input: UserInput) !void {
             const event = try Event.parse(input);
-            try self.state.?.handle_event(Game(GameConfig), self, event);
+            try self.state.?.handleEvent(event);
+            // try self.state.?.handle_event(Game(GameConfig), self, event);
+        }
+        
+        /// Executes the main event loop. Should process and handle static
+        /// enqueued events in the queue.
+        pub fn dispatchEvent(self: *Self) !void {
+            // const events = [_]Event{ .StartGame, .PlayedCard, .NextRound };
+            while(self.scheduler.poll_event()) |event| {
+                log.debug("\n--- Dispatching Event: {s} ---\n", .{event.toString()}); 
+                // try self.state.?.handleEvent(event);
+                self.state.update();
+
+
+            }
+            // log.debug("All event tasks have been processed!\n", .{}); 
         }
 
-        /// Static callback function setup. 
-        pub fn setup_callback(self: *Self) !void {
-            const event_fields: []const std.builtin.Type.UnionField = std.meta.fields(Event);
-            _ = self; 
-            _ = event_fields; 
-            // inline for (event_fields) |event_kind| {
-            //     // const info = @typeInfo(event_kind.type);
-            //     switch (event_kind.type) {
-            //         InternalEvent => {
-            //             const field_names = std.meta.fieldNames(InternalEvent);
-            //             for (field_names) |event_name| {
-            //                 const name: []const u8 = event_name; 
-            //                 const internal_event = InternalEvent.fromString(name);
-            //                 if (internal_event) |event| {
-            //                     switch (event) {
-            //
-            //                     }
-            //                 }
-            //             }
-            //         },
-            //
-            //     }
-            // }
-            // self.callback_manager.register(., cb: TaskCallback)
+        pub fn run(self: *Self) !void {
+            try self.state.update();
+            try self.state.execute(self); 
         }
+
 
         //TODO: - Delegate and move this logic to GameState - self.state.handle_event()
         pub fn dispatchTask(ctx: *anyopaque, input_kind: anytype) !void {
             var self: *Game(Config) = @ptrCast(@alignCast(ctx)); 
             const input_event: ?Event = try Event.parse(input_kind) orelse null; 
+            // self.callback_manager.event_dispatch();
 
             if (input_event) |event| {
                 switch (event) {

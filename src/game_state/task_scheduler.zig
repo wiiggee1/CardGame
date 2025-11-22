@@ -10,6 +10,7 @@ const InternalEvent = events.InternalEvent;
 const UserInput = events.UserInput;  
 const NetworkEvent = events.NetworkEvent;
 const Event = events.Event; 
+const EventObject = events.EventObject; 
 const EventMessage = events.EventMessage; 
 
 // According to Zig documentation the following are stated: 
@@ -50,24 +51,17 @@ pub const TaskCallback = struct {
     /// `Game`, and `Session` instances. 
     ctx: ?*anyopaque = null, 
     func: CallbackFnPtr,
-    // func: CallbackEventFnPtr,
-    // event_func: CallbackEventFnPtr = null,
 
     pub fn run_task(self: TaskCallback) !void {
     // pub fn run_task(self: TaskCallback, event: ?Event) !void {
         return self.func(self.ctx); 
-        // return self.func(self.ctx, event); 
     }
     
     pub fn from(comptime T: type, ctx: ?*anyopaque) TaskCallback {
         if (!@hasDecl(T, "run_task")) @compileError("Callback ctx type "++@typeName(T)++" missing 'run_task' declaration!"); 
-        // @fieldParentPtr(comptime field_name: []const u8, field_ptr: *T)
-
 
         const self: *T = @ptrCast(@alignCast(ctx)); 
         return TaskCallback{
-            // .func = T.run,
-            // .func = self.run_task,
             .func = self.run_task,
             .ctx = self,
         };
@@ -75,6 +69,10 @@ pub const TaskCallback = struct {
 
 };
 
+pub const TaskObject = struct {
+    data: TaskCallback,
+    node: std.DoublyLinkedList.Node = .{},
+};
 
 /// Task hashmap for mapping event types into 
 /// a callback function with an associated context pointer. 
@@ -89,6 +87,18 @@ pub const TaskMap = std.AutoHashMap(Event, TaskCallback);
 /// The key distinction between an `Event Dispatcher` and a `Task Scheduler` is that, 
 /// the dispatcher would map events to runnable (enqueued) Tasks. While the scheduler, 
 /// would keep and hold and execute the queued Task (Callback function + Context).
+/// ------------------------------------
+/// Example of flow of execution (responsibility):
+/// ```
+/// event_queue.enqueue(event1)
+/// event_queue.enqueue(event2)
+///
+/// loop:
+///    while (event_queue.next()) {
+///        event = event_queue.pop()      ← Polling
+///        event.dispatch()               ← Dispatching
+///    }
+/// ```
 pub fn TaskScheduler(comptime E: type) type {
     if (E != Event){
         @compileError("The type must be an `Event` enum. "++"Got: "++@typeName(@TypeOf(E))); 
@@ -96,16 +106,19 @@ pub fn TaskScheduler(comptime E: type) type {
 
     return struct {
         const Self = @This(); 
-        pub const Key: type = Event; // type alias 
-        pub const Task: type = TaskCallback; // type alias 
-        pub const EventDispatcher = std.ArrayList(Key); 
+        pub const Key: Event = E; // type alias 
+        pub const Task = TaskCallback; // type alias 
+        // pub const EventDispatcher = std.ArrayList(Key); 
         // pub const EventQueue = std.ArrayList(Key); 
-        pub const TaskEventQueue = std.DoublyLinkedList(Task); 
+        pub const EventQueue = std.DoublyLinkedList; 
+        pub const TaskEventQueue = std.DoublyLinkedList; 
         pub const FifoQueue = std.fifo.LinearFifo(Task, .Dynamic);
 
         tasks: TaskMap, 
-        /// Should map `Event` to `Tasks`. 
-        event_queue: EventDispatcher, 
+        /// Should poll(fetching pending events) and dispatch(execute callbacks) 
+        /// `Event`. 
+        // event_queue: EventDispatcher, 
+        event_queue: EventQueue, 
         /// Keep and maintain a queue of the runnable callback 
         /// tasks (runnable actions). 
         task_queue: TaskEventQueue, 
@@ -114,26 +127,49 @@ pub fn TaskScheduler(comptime E: type) type {
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
                 .tasks = TaskMap.init(allocator),
-                .event_queue = EventDispatcher.init(allocator),
-                .task_queue = TaskEventQueue{},
+                // .event_queue = EventDispatcher.init(allocator),
+                .event_queue = .{},
+                .task_queue = .{},
                 .allocator = allocator,
             }; 
         }
 
         pub fn deinit(self: *Self) void{
             self.tasks.deinit();
-            self.event_queue.deinit(); 
+            // self.event_queue.deinit(); 
+        }
+
+        pub fn poll_event(self: *Self) ?Event{
+            if(self.event_queue.pop()) |node| {
+                const node_e: *EventObject = @fieldParentPtr("node", node);
+                return node_e.data;
+                // return node.data;
+            }else{
+                return null; 
+            }
+        }
+
+        pub fn poll_event_object(self: *Self) ?*EventObject{
+            if(self.event_queue.pop()) |node| {
+                return @fieldParentPtr("node", node);
+            }else{
+                return null; 
+            }
         }
 
         /// Executes the main event loop. Should process and handle static
-        /// enqueued events in the queue. This act as an `Event Dispatcher`.
+        /// enqueued events in the queue.
         pub fn event_dispatch(self: *Self) !void {
             // const events = [_]Event{ .StartGame, .PlayedCard, .NextRound };
             while(true) {
                 const latest_event = self.event_queue.pop(); // pop or dequeues from FIFO event queue. 
-                if (latest_event) |event| {
-                    std.debug.print("\n--- Dispatching Event: {s} ---\n", .{event.toString()}); 
-                    try self.run_callback(event); 
+                if (latest_event) |event_node| {
+                    const action: *EventObject = @fieldParentPtr("node", event_node);
+                    defer self.allocator.destroy(action); // free or destroy after use!
+
+                    std.debug.print("\n--- Dispatching Event: {s} ---\n", .{action.data.event.toString()}); 
+
+                    try self.run_callback(action.data); 
                     // try game_state.transition(event); 
 
                 }else {
@@ -155,20 +191,36 @@ pub fn TaskScheduler(comptime E: type) type {
         pub fn poll_task(self: *Self, ctx_handle: anytype) !void {
             _ = ctx_handle; 
             while(self.task_queue.pop()) |node| {
-                const task_event = node.data; 
+                const node_t: *TaskObject = @fieldParentPtr("node", node);
+                const task_event = node_t.data; 
                 try task_event.run_task(); 
             }
         }
 
-        pub fn enqueue_task(self: *Self, task: Task) void {
+        pub fn enqueue_task(self: *Self, task: Task) !void{
             // event_queue.enqueue(Event{ .event_type = .EnemySpotted, .task = my_task });
-            try self.task_queue.append(.{.data = task});
+
+            const new_task = try self.allocator.create(TaskObject);
+            // defer self.allocator.destroy(new_task);
+            new_task.* = .{
+                .data = task,
+                .node = .{},
+            };
+
+            self.task_queue.append(&new_task.node);
         }
 
         /// Adds new event to the queue. 
-        pub fn enqueue(self: *Self, event: Key) void {
+        pub fn enqueue(self: *Self, event: Event) !void{
             // event_queue.enqueue(Event{ .event_type = .EnemySpotted, .task = my_task });
-            try self.event_queue.append(event);
+
+            const new_event = try self.allocator.create(EventObject);
+            new_event.* = .{
+                .data = event,
+                .node = .{},
+            };
+
+            self.event_queue.append(&new_event.node);
         }
 
         pub fn print_callbacks(self: *Self) void {
@@ -192,26 +244,6 @@ pub fn TaskScheduler(comptime E: type) type {
             // event.tryIntoInternalEvent(); 
             try self.tasks.put(event, cb); 
             std.debug.print("Added new Callback for Event: {s}\n", .{event.toString()}); 
-        }
-
-        /// Similar to `from` logic, where we create a new `TaskCallback`
-        pub fn create_task(self: *Self, comptime T: type, ctx: ?*anyopaque) TaskCallback {
-            // pub fn allocator(self: *ArenaAllocator) Allocator {
-            //     return .{
-            //         .ptr = self,
-            //         .vtable = &.{
-            //             .alloc = alloc,
-            //             .resize = resize,
-            //             .remap = remap,
-            //             .free = free,
-            //         },
-            //     };
-            // }
-
-            const ctx_example: *T = @ptrCast(@alignCast(ctx));
-            const new_task = TaskCallback{.ctx = ctx_example, .func = ctx_example.run_task};
-            _ = self; 
-            return new_task; 
         }
     };
 }

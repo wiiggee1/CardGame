@@ -278,6 +278,11 @@ pub const NetworkEvent = struct {
     }
 };
 
+pub const EventObject = struct {
+    data: Event,
+    node: std.DoublyLinkedList.Node = .{},
+};
+
 pub const Event = union(enum) {
     event: InternalEvent, 
     /// Actions that the user / player makes during the game. 

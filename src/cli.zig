@@ -157,20 +157,24 @@ pub const GameConfig = struct {
     /// "Don't write to stdout if you are not the main application!"
     /// https://github.com/ziglang/zig/issues/15091#issuecomment-1788192127
     pub fn print(self: Self, options: PrintOptions, comparator: anytype) !void {
-        // const stderr = std.io.getStdErr().writer(); // Use stderr, for error message during debugging and testing. 
+        // Use stderr, for error message during debugging and testing. 
+        var print_buf: [4096]u8 = undefined;
+        var stderr_writer = std.fs.File.stderr().writer(&print_buf);
+        const stderr = &stderr_writer.interface;
+
         const fields = @typeInfo(@TypeOf(self)).@"struct".fields;
 
         switch(options){
             .DebugLogging => std.log.debug("{s:>5}\n", .{"GameConfig:"}),
             .Compare => {
-                // const info = @typeInfo(@TypeOf(comparator));
-                // if (info.optional == null) return error.TheComparatorIsNull; 
                 if (@TypeOf(comparator) != @TypeOf(self)) return error.TryingToCompareTwoDifferentTypes; 
-                try std.io.getStdErr().writer().print("{s:>5}\n", .{"GameConfig - Comparision [BEFORE / AFTER]:"}); 
-                
-
+                try stderr.print("{s:>5}\n", .{"GameConfig - Comparision [BEFORE / AFTER]:"});
+                try stderr.flush();
             },
-            .Default => try std.io.getStdErr().writer().print("{s:>5}\n", .{"GameConfig:"}),
+            .Default => {
+                try stderr.print("{s:>5}\n", .{"GameConfig:"});
+                try stderr.flush();
+            },
         }
         
 
@@ -219,9 +223,7 @@ pub const GameConfig = struct {
                     ?u8, ?u16 => "{?d} => {?d}\n",
                     else => "{any} => {any}\n",
                 }; 
-                try std.io.getStdErr().writer().print(comparison_format, .{field.name, @field(self, field.name), @field(comparator, field.name)});
-
-                // try std.io.getStdErr().writer().print(comparison_format, .{field.name, @field(comparator, field.name), @field(self, field.name)});
+                try stderr.print(comparison_format, .{field.name, @field(self, field.name), @field(comparator, field.name)});
 
             }else {
                 const print_format = "\t{s:<15}: " ++ switch (field.type) {
@@ -234,15 +236,19 @@ pub const GameConfig = struct {
 
                 switch(options){
                     .DebugLogging => std.log.scoped(.inner).debug(print_format, .{field.name, @field(self, field.name)}),
-                    .Compare => try std.io.getStdErr().writer().print(print_format, .{field.name, @field(self, field.name)}),
-                    .Default => try std.io.getStdErr().writer().print(print_format, .{field.name, @field(self, field.name)}),
+                    .Compare => try stderr.print(print_format, .{field.name, @field(self, field.name)}),
+                    .Default => try stderr.print(print_format, .{field.name, @field(self, field.name)}),
                 }
             }
+            try stderr.flush();
         }
     }
 
     fn help_option() !void {
-        const stdout = std.io.getStdOut().writer(); 
+        var help_buf: [1024]u8 = undefined;
+        var stdout_writer = std.fs.File.stdout().writer(&help_buf);
+        const stdout = &stdout_writer.interface;
+
         try stdout.print("Usage: game setup [options]\n", .{});
         try stdout.print("\t--help\n", .{});
         try stdout.print("\t--hosting <y/n>\n", .{});
@@ -250,10 +256,14 @@ pub const GameConfig = struct {
         try stdout.print("\t--id <str>\n", .{});
         try stdout.print("\t--ip\n", .{});
         try stdout.print("\t--port\n", .{});
+        try stdout.flush();
     }
 
     pub fn parse_args(allocator: std.mem.Allocator) ArgParsingError!Self {
-        const stdout = std.io.getStdOut().writer(); 
+        var args_buf: [1024]u8 = undefined;
+        var stdout_writer = std.fs.File.stdout().writer(&args_buf);
+        const stdout = &stdout_writer.interface;
+
         var args = try std.process.ArgIterator.initWithAllocator(allocator);
         defer args.deinit();
         _ = args.skip(); // First argument is the executable path to file. 
@@ -270,7 +280,6 @@ pub const GameConfig = struct {
         while(args.next()) |arg| {
             if (arg.len < 2){
                 try stdout.print("No options (flags) passed, using default values!\n", .{});
-                // Return with default values
             }
             if (arg.len < 3){}
 
@@ -304,6 +313,7 @@ pub const GameConfig = struct {
                     }
                     return error.FailedRetrevingFlagValue;
                 }
+                try stdout.flush();
                 continue;
             };
 
@@ -312,19 +322,21 @@ pub const GameConfig = struct {
 
             // Run different setup depending on if --hosting y or --hosting n. 
             if (std.ascii.eqlIgnoreCase(arg, "--hosting")){}
+
+            try stdout.flush();
         }
 
         try game_config.update_config(allocator); 
         try game_config.print(.DebugLogging, .{});
-        // const session_tag = try SessionType.try_from(game_config); 
-        // try stdout.print("GameConfig and SessionType.try_from gave: {s}\n", .{@tagName(session_tag)});
 
         return game_config; 
     }
 
     //TODO: - Move this, so its not part of the `cli.zig` logic!!!!!!
     pub fn create_socket() !void {
-        const stdout = std.io.getStdOut().writer(); 
+        var stdout_buf: [1024]u8 = undefined;
+        var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+        const stdout = &stdout_writer.interface;
 
         // Setting the port to 0, means the OS will pick the port for us. 
         const addr = try std.net.Address.resolveIp("127.0.0.1", 0); 
@@ -349,6 +361,8 @@ pub const GameConfig = struct {
         const ip_addr = temp_addr.any;
         const addr_port = temp_addr.getPort();
         try stdout.print("Address IP: {}, PORT: {d}\n", .{ip_addr, addr_port});
+
+        try stdout.flush();
 
     }
 

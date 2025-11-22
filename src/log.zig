@@ -5,6 +5,7 @@ pub const custom_log_options = std.Options{
 };
 
 //TODO: - Add `game`, `network` scope...
+
 pub const custom_scope_options = [_]std.log.ScopeLevel{
     .{.scope = .multiple_lines, .level = .debug},
     .{.scope = .inner_scope, .level = .debug},
@@ -13,9 +14,13 @@ pub const custom_scope_options = [_]std.log.ScopeLevel{
 };
 
 pub fn loggerFn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void{
-    const stderr = std.io.getStdErr().writer();
+    var log_buf: [1024]u8 = undefined;
+    var writer = std.fs.File.stderr().writer(&log_buf);
+    // const stderr = std.io.getStdErr().writer();
+    const stderr = &writer.interface;
+
+
     const level_string = comptime switch (level) {
-        // .debug => stderr.print("\x1b[1;34m[debug]\x1b[0m: ", .{}) catch {},
         .debug => "\x1b[1;34m[debug]\x1b[0m : ",
         .warn => "\x1b[1;33m[warn]\x1b[0m : ",
         .info => "\x1b[1;37m[info]\x1b[0m : ",
@@ -31,10 +36,7 @@ pub fn loggerFn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLite
     }else {
         // std.debug.print("scope: {}\n", .{scope});
         const scope_prefix = if (scope == .default) " " else " (" ++ @tagName(scope) ++ "): ";
-        // std.debug.lockStdErr();
-        // defer std.debug.unlockStdErr();
-        // nosuspend stderr.print(format++" - "++@tagName(scope), args) catch {};
         stderr.print(level_string ++ format ++ scope_prefix, args) catch {};
-
     }
+    stderr.flush() catch {};
 }

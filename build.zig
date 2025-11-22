@@ -22,14 +22,6 @@ pub fn build(b: *std.Build) void {
     const home_directory = std.process.getEnvVarOwned(b.allocator, "HOME") catch "";
     _ = home_directory; 
 
-    // const lib_mod = b.createModule(.{
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        // .root_source_file = b.path("src/root.zig"),
-        // .target = target,
-        // .optimize = optimize,
-    // });
-
     // We will also create a module for our other entry point, 'main.zig'.
     const exe_mod = b.createModule(.{
         // `root_source_file` is the Zig "entry point" of the module. If a module
@@ -41,37 +33,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-
-    // Modules can depend on one another using the `std.Build.Module.addImport` function.
-    // This is what allows Zig source code to use `@import("foo")` where 'foo' is not a
-    // file path. In this case, we set up `exe_mod` to import `lib_mod`.
-    // exe_mod.addImport("CardGameZig", lib_mod);
-
-    // Now, we will create a static library based on the module we created above.
-    // This creates a `std.Build.Step.Compile`, which is the build step responsible
-    // for actually invoking the compiler.
-    // const lib = b.addLibrary(.{
-    //     .linkage = .static,
-    //     .name = "CardGameZig",
-    //     .root_module = lib_mod,
-    // });
-
-
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running `zig build`).
-    // b.installArtifact(lib);
-
     const exe = b.addExecutable(.{
         .name = "CardGameZig",
         .root_module = exe_mod,
     });
-
-    // const settings_module = b.dependency("config", .{.target = target, .optimize = optimize}).module("config");
-
-    // const state = b.createModule(.{ .root_source_file = b.path("src/game_state/states.zig") });
-    // const event = b.createModule(.{ .root_source_file = b.path("src/game_state/events.zig") });
-    // const task_scheduler = b.createModule(.{ .root_source_file = b.path("src/game_state/task_scheduler.zig") });
 
     const game_state_mod = b.addModule("game_state", .{
         .root_source_file = b.path("src/game_state/game_state.zig"),
@@ -175,30 +140,37 @@ pub fn build(b: *std.Build) void {
 
     const test_filter = b.option([]const u8, "test-filter", "Filters for test");
 
+    // pub const TestOptions = struct {
+    //     name: []const u8 = "test",
+    //     root_module: *Module,
+    //     max_rss: usize = 0,
+    //     filters: []const []const u8 = &.{},
+    //     test_runner: ?Step.Compile.TestRunner = null,
+    //     use_llvm: ?bool = null,
+    //     use_lld: ?bool = null,
+    //     zig_lib_dir: ?LazyPath = null,
+    //     /// Emits an object file instead of a test binary.
+    //     /// The object must be linked separately.
+    //     /// Usually used in conjunction with a custom `test_runner`.
+    //     emit_object: bool = false,
+    // };
+
+
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const unit_testing = b.addTest(.{
         .name = "game-test",
         .filters = if (test_filter) |filter| &.{filter} else &.{}, 
-        // .root_source_file = b.path("src/game.zig"), // working
-        .root_source_file = b.path("src/main.zig"), // testing?!?!?
-        // .root_module = exe_mod,
-        // .root_module = b.createModule(.{
-        //         .root_source_file = b.path("src/game.zig"),
-        //         // .root_source_file = b.path("src/main.zig"),
-        //         .target = target,
-        //         .optimize = .Debug,
-        //         .strip = false,
-        //         .omit_frame_pointer = false,
-        //         .unwind_tables = .sync,
-        // }),
+        // .root_source_file = b.path("src/main.zig"), // testing?!?!?
+        .root_module = exe.root_module, // testing?!?!?
         .test_runner = .{ .path = b.path("src/unit_testing.zig"), .mode = .simple},
     });
 
     const gamestate_testing = b.addTest(.{
         .name = "gamestate-test",
         .filters = if (test_filter) |filter| &.{filter} else &.{}, 
-        .root_source_file = b.path("src/game_state/game_state.zig"), // working
+        // .root_source_file = b.path("src/game_state/game_state.zig"), // working
+        .root_module = game_state_mod,
         .test_runner = .{ .path = b.path("src/unit_testing.zig"), .mode = .simple},
     });
 
@@ -213,10 +185,6 @@ pub fn build(b: *std.Build) void {
 
     const run_game_testing = b.addRunArtifact(unit_testing);
     run_game_testing.has_side_effects = true; 
-    
-    // gamestate_testing.root_module.addImport("game", game_mod);
-    // const runstep_gamestep = b.addRunArtifact(gamestate_testing);
-    // runstep_gamestep.has_side_effects = true; 
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
