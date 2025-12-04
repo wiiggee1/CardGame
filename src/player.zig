@@ -3,25 +3,32 @@ const std = @import("std");
 pub const Player = struct {
     id: ?u16,
     name: ?[]const u8,
-    red_cards: ?std.ArrayList([]const u8) = null,
-    green_cards: ?std.ArrayList([]const u8) = null,
+    red_cards: std.ArrayList([]const u8) = .empty,
+    green_cards: std.ArrayList([]const u8) = .empty,
     
-    // The play fn pointer, is the 'behavioral functionality'.
-    // play: *const fn(args: anytype) void, 
-
     pub fn new(id: ?u16, name: ?[]const u8, allocator: std.mem.Allocator) Player {
-        
+        _ = allocator;
         return Player{
             .id = id,
             .name = name,
-            .red_cards = std.ArrayList([]const u8).init(allocator), 
-            .green_cards = std.ArrayList([]const u8).init(allocator), 
+            // .red_cards = std.ArrayList([]const u8).init(allocator), 
+            // .green_cards = std.ArrayList([]const u8).init(allocator), 
+            .red_cards = .empty, 
+            .green_cards = .empty, 
         }; 
     }
 
-    pub fn add_card(self: *Player, card: []const u8) !void {
-        _ = self; 
-        _ = card; 
+    // pub fn add_card(self: *Player, card: []const u8, allocator: std.mem.Allocator) !void {
+    //     _ = self; 
+    //     _ = card; 
+    // }
+
+    pub fn add_red(self: *Player, card: []const u8, allocator: std.mem.Allocator) !void {
+        self.red_cards.append(allocator, card);
+    }
+
+    pub fn add_green(self: *Player, card: []const u8, allocator: std.mem.Allocator) !void {
+        self.green_cards.append(allocator, card);
     }
 };
 

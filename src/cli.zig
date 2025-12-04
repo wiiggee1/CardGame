@@ -12,6 +12,7 @@ const ArgIterator = std.process.ArgIterator;
 /// It also handles parsing of the arguments passed when executing the game file. 
 pub const GameConfig = struct {
     const Self = @This(); // returns the type of the inner most struct.
+
     pub const DEFAULT_IP: []const u8 = "127.0.0.1"; 
     pub const DEFAULT_PORT: u16 = 0; 
 

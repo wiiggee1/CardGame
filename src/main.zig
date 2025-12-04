@@ -14,20 +14,33 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{ .verbose_log = true }){};
     const allocator = gpa.allocator();
     defer _ = gpa.deinit(); 
-    // std.testing.log_level = .debug; 
     
+    // var game_obj = try setup_game(allocator);
+    var game_obj = try setup_game_v2(allocator);
+    defer game_obj.deinit();
+    game_obj.gameloop();
+    
+    // try game.read_config("data/redApples.txt", "red_apples");
+}
+
+fn setup_game(allocator: std.mem.Allocator) !Game{
     std.log.info("Setting up the GameConfig Now!\n", .{});
     var game_config = try GameConfig.parse_args(allocator);
-    defer game_config.deinit(allocator); // This would free the allocated `id` field. 
+
+    // defer game_config.deinit(allocator); // This would free the allocated `id` field. 
     try game_config.print(.DebugLogging, .{});
+
     var game_obj = try Game.init(allocator, game_config); 
     try game_obj.setup(allocator);
+    return game_obj;
+}
 
-    // std.debug.print("Args received: hosting={}, id={s}, ip={s}, num_bots={d}, num_player={d}, port={d}\n", .{ args.hosting, args.id, args.ip, args.num_bots, args.num_player, args.port });
-    
-    // var game = try Game.init(allocator, args);
-    // defer game.deinit();
-    // try game.read_config("data/redApples.txt", "red_apples");
+fn setup_game_v2(allocator: std.mem.Allocator) !Game{
+    std.log.info("Setting up the GameConfig Now!\n", .{});
+
+    var game_obj = try Game.init_v2(allocator); 
+    try game_obj.setup(allocator);
+    return game_obj;
 }
 
 test {

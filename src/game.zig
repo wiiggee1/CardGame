@@ -7,7 +7,10 @@
 const std = @import("std");
 // const game_state = @import("game_state");
 const game_state = @import("game_state/game_state.zig");
+const task_scheduler = @import("game_state/task_scheduler.zig");
+const states = @import("game_state/states.zig");
 const settings = @import("settings");
+const events = @import("game_state/events.zig");
 
 const log = std.log.scoped(.game_logic);
 
@@ -15,15 +18,18 @@ pub const GameConfig = settings.GameConfig;
 pub const SessionType = settings.SessionType;
 pub const Session = settings.Session;
 
-const InternalEvent = game_state.InternalEvent; 
-const UserInput = game_state.UserInput; 
-const NetworkEvent = game_state.NetworkEvent; 
-const Event = game_state.Event; 
+const InternalEvent = events.InternalEvent; 
+const UserInput = events.UserInput; 
+const NetworkEvent = events.NetworkEvent; 
+const Event = events.Event; 
+
+const State = states.State; 
+const StateBuilder = states.StateBuilder;
 
 const GameState = game_state.GameState; 
-const State = game_state.State; 
-const TaskScheduler = game_state.TaskScheduler(Event); 
-const TaskCallback = game_state.TaskCallback; 
+
+const TaskScheduler = task_scheduler.TaskScheduler(Event); 
+const TaskCallback = task_scheduler.TaskCallback; 
 
 pub fn Game(comptime Config: type) type{
     if(!std.mem.eql(u8, @typeName(Config), @typeName(GameConfig))){
@@ -31,7 +37,6 @@ pub fn Game(comptime Config: type) type{
     }
     return struct {
         const Self = @This(); 
-        pub const AnyGameState = State.AnyState(GameState, GameState.execute, GameState.fsm_update, GameState.fsm_transition);
         allocator: std.mem.Allocator,
 
         /// The game instance is the main owner of the loaded `cards`. 
@@ -43,8 +48,7 @@ pub fn Game(comptime Config: type) type{
         /// the game. It contains the neccessary data, to setup the game. 
         config: Config,
 
-        // state: AnyGameState,
-        state: State,
+        // state: State,
         scheduler: TaskScheduler,
         session: Session,
 
@@ -53,16 +57,33 @@ pub fn Game(comptime Config: type) type{
             //try hashmap.put("red_apples", null);
             //try hashmap.put("green_apples", null);
 
-            const gamestate = AnyGameState{.ctx = .from(.Initial)};
+            // const gamestate = AnyGameState{.ctx = .from(.Initial)};
 
             return Self{
                 .allocator = allocator,
                 .cards = hashmap,
                 .config = options,
                 // .state = .{ .ctx = .from(.Initial) },
-                .state = gamestate.new(),
+                // .state = gamestate.new(),
                 .scheduler = .init(allocator),
                 .session = try Session.create(options, allocator), 
+            };
+        }
+        
+        pub fn init_v2(allocator: std.mem.Allocator) !Self {
+            const hashmap = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
+            //try hashmap.put("red_apples", null);
+            //try hashmap.put("green_apples", null);
+
+            const game_options = try GameConfig.parse_args(allocator);
+            try game_options.print(.DebugLogging, .{});
+
+            return Self{
+                .allocator = allocator,
+                .cards = hashmap,
+                .config = game_options,
+                .scheduler = .init(allocator),
+                .session = try Session.create(game_options, allocator), 
             };
         }
 
@@ -74,10 +95,6 @@ pub fn Game(comptime Config: type) type{
         pub fn getField(self: *Self, comptime field_name: []const u8) !@FieldType(Self, field_name) {
             if (!@hasField(@TypeOf(Self), field_name)) return error.FieldDoesntExist; 
             return @field(self, field_name);
-            // @fieldParentPtr(comptime field_name: []const u8, field_ptr: *T)
-            // const info = @typeInfo(@TypeOf(self.*));
-            // inline for(info.@"struct".fields) |field| {
-            // }
         }
 
 
@@ -250,12 +267,35 @@ pub fn Game(comptime Config: type) type{
         /// 2. Update game state (modify player object instance).
         /// 3. Render / Draw terminal / GUI. 
         pub fn gameloop(self: *Self) void {
-            const stdout = std.io.getStdOut().writer();
-            const stdin = std.io.getStdIn().reader(); 
+            if(self.config.hosting == false){
+                const starting: game_state.Initial = StateBuilder(.Initial).init();
+                var active_state = starting.state;
+                _ = &active_state;
+            }else{
+                // Host loop logic below:
+                self.event_listener();
+            }
+
+            var stdout_buf: [4096]u8 = undefined;
+            var stdin_buf: [4096]u8 = undefined;
+
+            var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+            var stdin_writer = std.fs.File.stdin().writer(&stdin_buf);
+            const stdout = &stdout_writer.interface;
+            const stdin = &stdin_writer.interface;
+
+            // const stdout = std.io.getStdOut().writer();
+            // const stdin = std.io.getStdIn().reader(); 
             _ = stdout; 
             _ = stdin; 
-            _ = self; 
+
             // while(true)...
+        }
+
+        /// This is the equivalent of the Host's game-loop that listens for events 
+        /// and react accordingly. 
+        pub fn event_listener(self: *Self) void{
+            _ = self;
         }
 
         /// Read game config files, passing string as path.
@@ -310,8 +350,6 @@ test {
     // _ = @import("game_state"); 
     
 }
-
-// fn test_bot_count()
 
 fn test_points_mapping(game: *Game(GameConfig), allocator: std.mem.Allocator) bool {
     // game.setup(allocator) catch return false; 
