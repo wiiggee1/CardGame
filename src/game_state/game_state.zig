@@ -33,11 +33,13 @@ pub const Initial = struct {
         _ = game_obj;
         const self: *Initial = @alignCast(@fieldParentPtr("state", state_base)); 
         _ = self;
+        // Custom execute logic for specific state type
     }
 
     pub fn update(state_base: *State) StateError!void {
         const self: *Initial = @alignCast(@fieldParentPtr("state", state_base));
         _ = self;
+        // Custom update logic for specific state type
     }
 
 };
@@ -56,11 +58,13 @@ pub const MainMenu = struct {
         _ = game_obj;
         const self: *MainMenu = @alignCast(@fieldParentPtr("state", state_base)); 
         _ = self;
+        // Custom execute logic for specific state type
     }
 
     pub fn update(state_base: *State) StateError!void {
         const self: *MainMenu = @alignCast(@fieldParentPtr("state", state_base));
         _ = self;
+        // Custom update logic for specific state type
     }
 
 };
@@ -72,11 +76,13 @@ pub const Playing = struct {
         _ = game_obj;
         const self: *Playing = @alignCast(@fieldParentPtr("state", state_base)); 
         _ = self;
+        // Custom execute logic for specific state type
     }
 
     pub fn update(state_base: *State) StateError!void {
         const self: *Playing = @alignCast(@fieldParentPtr("state", state_base));
         _ = self;
+        // Custom update logic for specific state type
     }
 };
 
@@ -88,11 +94,13 @@ pub const Waiting = struct {
         _ = game_obj;
         const self: *Waiting = @alignCast(@fieldParentPtr("state", state_base)); 
         _ = self;
+        // Custom execute logic for specific state type
     }
 
     pub fn update(state_base: *State) StateError!void {
         const self: *Waiting = @alignCast(@fieldParentPtr("state", state_base));
         _ = self;
+        // Custom update logic for specific state type
     }
 };
 
@@ -104,11 +112,13 @@ pub const Judging = struct {
         _ = game_obj;
         const self: *Judging = @alignCast(@fieldParentPtr("state", state_base)); 
         _ = self;
+        // Custom execute logic for specific state type
     }
 
     pub fn update(state_base: *State) StateError!void {
         const self: *Judging = @alignCast(@fieldParentPtr("state", state_base));
         _ = self;
+        // Custom update logic for specific state type
     }
 };
 
@@ -119,15 +129,41 @@ pub const Update = struct {
         _ = game_obj;
         const self: *Update = @alignCast(@fieldParentPtr("state", state_base)); 
         _ = self;
+        // Custom execute logic for specific state type
     }
 
     pub fn update(state_base: *State) StateError!void {
         const self: *Update = @alignCast(@fieldParentPtr("state", state_base));
         _ = self;
+        // Custom update logic for specific state type
     }
 };
 
-const abc = GameState.init(.Initial, .{});
+pub fn GameStateManager(comptime T: type) type{
+    return struct {
+        // const Self = @This();
+        const Self = T;
+
+        fn execute_callback(state_ptr: *State, game_obj: *anyopaque) !void {
+            const self: *T = @alignCast(@fieldParentPtr("state", state_ptr));
+            // try Playing.execute(state_ptr, game_obj);
+            try self.execute(state_ptr, game_obj);
+        }
+
+        fn update_callback(state_ptr: *State) !void {
+            const self: *T = @alignCast(@fieldParentPtr("state", state_ptr));
+            // try Playing.update(state_ptr);
+            try self.update();
+        }
+    };
+}
+
+// const abc = GameStateManager(Playing).update_callback(state_ptr: *State)
+
+//TODO:
+// 1. Define a State machine or GameState manager type, that handles the changing of states and executing the callbacks. 
+// 2. Redefine how the GameState's or States should be initialized and executed → Refactor current GameState type...
+
 
 /// The `GameState` tagged union, represent the concrete active state. 
 /// It executes and gain access to only the active state's functionality. 
@@ -178,15 +214,9 @@ pub const GameState = union(State.Kind) {
         };
     }
 
-    fn dummy_callback(ctx: ?*anyopaque) !void {
-        var self: *GameState = @ptrCast(@alignCast(ctx)); 
-        std.log.debug("{s} executed callback! \n", .{self.get_state().toString()});
-    }
-
-    // pub fn fsm_transition(self: *GameState, next_state: State) !State{
-    //     return try self.intoState().transition(next_state);
-    //     // self.state = next_state;
-    //
+    // fn dummy_callback(ctx: ?*anyopaque) !void {
+    //     var self: *GameState = @ptrCast(@alignCast(ctx)); 
+    //     std.log.debug("{s} executed callback! \n", .{self.get_state().toString()});
     // }
 
     // pub fn fsm_update(self: *GameState) !void {
@@ -230,12 +260,12 @@ pub const GameState = union(State.Kind) {
         // Based on different criterions! 
         switch (self.*) {
             .Initial => |*active_field| {
-                try active_field.setup_callback.run_task(); // Run state specific stuff upon entering state.
-                // active_field.initFrom(state_ctx: anytype)
+                _ = active_field;
+                // try active_field.setup_callback.run_task(); // Run state specific stuff upon entering state.
                 if (event_kind == .StartGame) {
-                    self = GameState{.MainMenu = .{.callback = TaskCallback{.ctx = self, .func = dummy_callback}}}; 
-                    const new_state = self.get_state().toString(); 
-                    std.debug.print("\t→ New State: {s}\n", .{new_state});
+                    // self = GameState{.MainMenu = .{.callback = TaskCallback{.ctx = self, .func = dummy_callback}}}; 
+                    // const new_state = self.get_state().toString(); 
+                    // std.debug.print("\t→ New State: {s}\n", .{new_state});
                 }
 
                 if (event_kind == .ClientConnected) {
@@ -243,18 +273,19 @@ pub const GameState = union(State.Kind) {
                 }
             },
             .MainMenu => |*menu| {
-                try menu.callback.run_task(); 
+                // try menu.callback.run_task(); 
+                _ = menu;
 
                 if (event_kind == .StartAsJudge) {
-                    self = GameState{.Judging = .{.callback = .{.ctx = self, .func = dummy_callback}}}; 
+                    // self = GameState{.Judging = .{.callback = .{.ctx = self, .func = dummy_callback}}}; 
                 }else if (event_kind == .StartAsPlayer){
-                    self = GameState{.Playing = .{.callback = .{.ctx = self, .func = dummy_callback}}}; 
+                    // self = GameState{.Playing = .{.callback = .{.ctx = self, .func = dummy_callback}}}; 
                 }else {
                     
                 }
 
-                const new_state = self.get_state().toString(); 
-                std.debug.print("\t→ New State: {s}\n", .{new_state});
+                // const new_state = self.get_state().toString(); 
+                // std.debug.print("\t→ New State: {s}\n", .{new_state});
             },
             else => {},
         }

@@ -210,17 +210,58 @@ pub const State = struct {
         // }; 
     // }
 
+    pub fn init(comptime state_kind: Kind) State{
+        const StateContextType = switch (state_kind) {
+            .Initial => game_state.Initial, 
+            .MainMenu => game_state.MainMenu, 
+            .Playing => game_state.Playing, 
+            .Waiting => game_state.Waiting, 
+            .Judging => game_state.Judging, 
+            .Update => game_state.Update, 
+        };
+
+        const state_vtable = create_vtable(StateContextType);
+
+        return State{
+            .kind = state_kind,
+            .vtable = &state_vtable,
+        };
+    }
+
+    fn create_vtable(StateType: type) StateVTable{
+        std.debug.assert(@hasField(StateType, "state"));
+        std.debug.assert(@hasDecl(StateType, "execute"));
+        std.debug.assert(@hasDecl(StateType, "update"));
+
+        return State.StateVTable{
+            .execute_fn = StateType.execute,
+            .update_fn = StateType.update,
+        };
+    }
+
     /// Helper for casting into a specific State Type.
     pub fn asContext(self: *State, comptime T: type) *T {
         const context: *T = @alignCast(@fieldParentPtr("state", self));
         return context;
-        // return @as(*T, @alignCast(@fieldParentPtr("state", self)));
+
+        // const ptr: *State = @ptrCast(@alignCast(self));
+        // return @as(*T, @fieldParentPtr("state", ptr));
     }
 
     pub fn execute(self: *State, game_ctx: *anyopaque) StateError!void{
         // pub fn execute(self: *State, game: *Game) StateError!void{
         // self.vtable.execute_fn(self.ptr, game);
         self.vtable.execute_fn(self, game_ctx);
+    }
+    
+    pub fn update(self: *State) StateError!void{
+        // self.vtable.update_fn(self.ptr);
+        self.vtable.update_fn(self);
+    }
+
+    pub fn transition_v2(self: *State, comptime new_state: Kind) StateError!void{
+        // var next_state = init(new_state);
+        self.* = init(new_state);
     }
 
     pub fn transitionInto(self: *State, comptime new_state: Kind) StateError!void{
@@ -236,15 +277,12 @@ pub const State = struct {
         };
 
         const context: *StateType = @alignCast(@fieldParentPtr("state", self));
+        // var context: *StateType = @alignCast(@fieldParentPtr("state", self));
         
         // self = &next_state;
         self = &context.state;
     }
 
-    pub fn update(self: *State) StateError!void{
-        // self.vtable.update_fn(self.ptr);
-        self.vtable.update_fn(self);
-    }
 
 }; 
 
@@ -259,24 +297,37 @@ pub fn debug_info(any: anytype, allocator: std.mem.Allocator) !void {
 
 test "state-transitions" {
 
-    const starting: game_state.Initial = StateBuilder(.Initial).init();
-    std.debug.print("Current State: {any}, kind: {any}\n", .{starting.state, starting.state.kind});
+    // const starting: game_state.Initial = StateBuilder(.Initial).init();
+    // std.debug.print("Current State: {any}, kind: {any}\n", .{starting.state, starting.state.kind});
 
-    var active_state = starting.state;
+    // var active_state = starting.state;
+    var active_state = State.init(.Initial);
+    std.debug.print("Created New State: {*}, kind: {any}\n", .{&active_state, active_state.kind});
+
     std.debug.print("Trying to transition from {any} → {any} State\n", .{active_state.kind, State.Kind.Judging});
 
-    try active_state.transitionInto(.Judging);
-    std.debug.print("New State: {any}\n", .{starting.state});
+    // try active_state.transitionInto(.Judging);
+    const judging = active_state.asContext(game_state.Judging);
+    judging.cards_received = 5;
+    try active_state.transition_v2(.Judging);
+    std.debug.print("New State: @{*} → {any} → {any}\n", .{&active_state, active_state.kind, judging.*});
 
-    const playing = active_state.asContext(game_state.Playing);
+    const playing: *game_state.Playing = active_state.asContext(game_state.Playing);
     active_state = playing.state;
-    std.debug.print("New Current State: {any}\n", .{active_state});
+    std.debug.print("New Current State: @{*} → Context: {any}\n", .{&active_state, playing.*});
 
-    try active_state.transitionInto(.Waiting);
-    std.debug.print("New Active State: {any}\n", .{active_state});
+    // try active_state.transitionInto(.Waiting);
+    try active_state.transition_v2(.Waiting);
+    std.debug.print("New Active State: @{*} → {any}\n", .{&active_state, active_state.kind});
     
-    try active_state.transitionInto(.MainMenu);
-    std.debug.print("Updated State To: {any}\n", .{active_state});
+    // try active_state.transitionInto(.MainMenu);
+    try active_state.transition_v2(.MainMenu);
+    std.debug.print("Updated State To: @{*} → {any}\n", .{&active_state, active_state.kind});
+
+    try active_state.transition_v2(.Judging);
+    const judging_obj = active_state.asContext(game_state.Judging);
+    std.debug.print("New State: @{*} → {any} → Context: @{*}\n", .{&active_state, active_state.kind, judging_obj});
+    std.debug.print("Context Object: {any}\n", .{judging_obj.*});
 
     const user_inputs = [_]events.UserInput{
         .PickCard, 
